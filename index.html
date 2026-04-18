@@ -11,6 +11,18 @@
     <meta name="apple-mobile-web-app-title" content="Crate" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Crate</title>
+  <script>
+    (function () {
+      try {
+        var s = localStorage.getItem('crate-data')
+        var theme = s ? (JSON.parse(s).state || {}).settings?.theme : undefined
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (theme === 'dark' || (!theme || theme === 'system') && prefersDark) {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {}
+    })()
+  </script>
   </head>
   <body>
     <div id="root"></div>
