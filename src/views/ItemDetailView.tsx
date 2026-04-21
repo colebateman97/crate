@@ -6,7 +6,7 @@ import { useCrateStore } from '../store'
 import { TagChip } from '../components/TagChip'
 import { StarRating } from '../components/StarRating'
 import { getInitials, buildSpotifyDeepLink, buildAppleMusicDeepLink, formatYear } from '../utils'
-import { getArtistDiscography, getReleaseGroupCoverArt } from '../api/musicbrainz'
+import { getArtistDiscography, getReleaseGroupCoverArt, fetchLastfmTracklist } from '../api/musicbrainz'
 import type { MBReleaseGroup } from '../api/musicbrainz'
 import type { ListenStatus } from '../types'
 import { LISTEN_STATUS_LABELS } from '../types'
@@ -129,6 +129,15 @@ export function ItemDetailView() {
       }
     }
   }, [item?.coverArtUrl])
+
+  useEffect(() => {
+    if (item?.type !== 'album') return
+    if (item.tracklist && item.tracklist.length > 0) return
+    if (!settings.lastfmApiKey || !item.artist) return
+    fetchLastfmTracklist(item.artist, item.title, settings.lastfmApiKey).then((tracks) => {
+      if (tracks && tracks.length > 0) updateItem(item.id, { tracklist: tracks })
+    })
+  }, [item?.id, settings.lastfmApiKey])
 
   useEffect(() => {
     if (item?.type !== 'artist' || !item.mbid) return

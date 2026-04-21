@@ -213,6 +213,26 @@ export async function fetchAppleMusicMetadata(url: string): Promise<ItunesItem |
   }
 }
 
+export async function fetchLastfmTracklist(
+  artist: string,
+  album: string,
+  apiKey: string,
+): Promise<string[] | null> {
+  try {
+    const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=${encodeURIComponent(apiKey)}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&format=json`
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.error) return null
+    const tracks = data.album?.tracks?.track
+    if (!tracks) return null
+    const arr = Array.isArray(tracks) ? tracks : [tracks]
+    return arr.map((t: { name: string }) => t.name).filter(Boolean)
+  } catch {
+    return null
+  }
+}
+
 export async function searchItunesMetadata(
   title: string,
   artist: string,
