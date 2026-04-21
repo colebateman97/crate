@@ -99,6 +99,7 @@ export function ItemDetailView() {
   const item = items.find((i) => i.id === id)
 
   const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [bgColors, setBgColors] = useState<[string, string, string] | null>(null)
   const [textLight, setTextLight] = useState(false)
 
@@ -171,10 +172,8 @@ export function ItemDetailView() {
   }
 
   function handleDelete() {
-    if (confirm('Remove this item from your crate?')) {
-      deleteItem(item!.id)
-      navigate(-1)
-    }
+    deleteItem(item!.id)
+    navigate(-1)
   }
 
   const GradBg = () => {
@@ -218,12 +217,30 @@ export function ItemDetailView() {
           >
             {editing ? 'Done' : 'Edit'}
           </button>
-          <button
-            onClick={handleDelete}
-            className="text-xs px-3 py-1.5 rounded-full border border-red-300/50 text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            Remove
-          </button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-red-400">Remove?</span>
+              <button
+                onClick={handleDelete}
+                className="text-xs px-3 py-1.5 rounded-full bg-red-500 text-white transition-colors"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${th.editBtn}`}
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="text-xs px-3 py-1.5 rounded-full border border-red-300/50 text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              Remove
+            </button>
+          )}
         </div>
       </div>
 

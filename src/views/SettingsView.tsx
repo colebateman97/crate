@@ -11,6 +11,7 @@ export function SettingsView() {
   const [newTagName, setNewTagName] = useState('')
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [newListName, setNewListName] = useState('')
+  const [confirmClear, setConfirmClear] = useState(false)
 
   function handleExport() {
     const data = exportData()
@@ -48,9 +49,8 @@ export function SettingsView() {
   }
 
   function handleClear() {
-    if (confirm('This will delete all your saved items, lists, and tags. This cannot be undone. Continue?')) {
-      clearAllData()
-    }
+    clearAllData()
+    setConfirmClear(false)
   }
 
   function addNewTag() {
@@ -255,13 +255,33 @@ export function SettingsView() {
               </button>
             </div>
 
-            <button
-              onClick={handleClear}
-              className="flex items-center justify-between w-full px-4 py-3 rounded-xl border border-red-200 dark:border-red-900/50 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              <span>Clear all data</span>
-              <span>⚠</span>
-            </button>
+            {confirmClear ? (
+              <div className="flex items-center justify-between w-full px-4 py-3 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20">
+                <span className="text-sm text-red-500">Delete everything?</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleClear}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-red-500 text-white"
+                  >
+                    Yes, delete
+                  </button>
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmClear(true)}
+                className="flex items-center justify-between w-full px-4 py-3 rounded-xl border border-red-200 dark:border-red-900/50 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <span>Clear all data</span>
+                <span>⚠</span>
+              </button>
+            )}
           </div>
         </Section>
 
