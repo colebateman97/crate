@@ -6,7 +6,7 @@ import { useCrateStore } from '../store'
 import { TagChip } from '../components/TagChip'
 import { StarRating } from '../components/StarRating'
 import { getInitials, buildSpotifyDeepLink, buildAppleMusicDeepLink, formatYear } from '../utils'
-import { getArtistDiscography, getReleaseGroupCoverArt, fetchLastfmTracklist, fetchArtistImage, buildLastfmUrl } from '../api/musicbrainz'
+import { getArtistDiscography, getReleaseGroupCoverArt, fetchLastfmTracklist, fetchArtistImage, buildLastfmUrl, getWikipediaUrl } from '../api/musicbrainz'
 import type { MBReleaseGroup } from '../api/musicbrainz'
 import type { ListenStatus } from '../types'
 import { LISTEN_STATUS_LABELS } from '../types'
@@ -138,6 +138,14 @@ export function ItemDetailView() {
       if (tracks && tracks.length > 0) updateItem(item.id, { tracklist: tracks })
     })
   }, [item?.id, settings.lastfmApiKey])
+
+  useEffect(() => {
+    if (!item || item.wikipediaUrl) return
+    if (item.type !== 'artist' && item.type !== 'album') return
+    getWikipediaUrl(item.type === 'artist' ? item.title : `${item.title} ${item.artist ?? ''}`, item.type).then((url) => {
+      if (url) updateItem(item.id, { wikipediaUrl: url })
+    })
+  }, [item?.id])
 
   useEffect(() => {
     if (item?.type !== 'artist' || item.coverArtUrl) return
