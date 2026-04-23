@@ -108,6 +108,34 @@ export async function getReleaseGroupCoverArt(rgMbid: string): Promise<string | 
   }
 }
 
+export async function fetchArtistImage(artistName: string): Promise<string | null> {
+  try {
+    const searchRes = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(artistName + ' musician band')}&format=json&origin=*&srlimit=1`
+    )
+    const searchData = await searchRes.json()
+    const pageTitle = searchData?.query?.search?.[0]?.title
+    if (!pageTitle) return null
+    const summaryRes = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
+    )
+    const summaryData = await summaryRes.json()
+    return summaryData?.thumbnail?.source ?? null
+  } catch {
+    return null
+  }
+}
+
+export function buildLastfmUrl(type: 'album' | 'song' | 'artist', title: string, artist?: string): string | null {
+  if (!title) return null
+  const enc = (s: string) => encodeURIComponent(s)
+  if (type === 'artist') return `https://www.last.fm/music/${enc(title)}`
+  if (!artist) return null
+  if (type === 'album') return `https://www.last.fm/music/${enc(artist)}/${enc(title)}`
+  if (type === 'song') return `https://www.last.fm/music/${enc(artist)}/_/${enc(title)}`
+  return null
+}
+
 export async function getWikipediaUrl(name: string, type: 'album' | 'artist' | 'song'): Promise<string | null> {
   const suffixes: Record<string, string> = {
     album: 'album',

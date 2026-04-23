@@ -6,7 +6,7 @@ import { useCrateStore } from '../store'
 import { TagChip } from '../components/TagChip'
 import { StarRating } from '../components/StarRating'
 import { getInitials, buildSpotifyDeepLink, buildAppleMusicDeepLink, formatYear } from '../utils'
-import { getArtistDiscography, getReleaseGroupCoverArt, fetchLastfmTracklist } from '../api/musicbrainz'
+import { getArtistDiscography, getReleaseGroupCoverArt, fetchLastfmTracklist, fetchArtistImage, buildLastfmUrl } from '../api/musicbrainz'
 import type { MBReleaseGroup } from '../api/musicbrainz'
 import type { ListenStatus } from '../types'
 import { LISTEN_STATUS_LABELS } from '../types'
@@ -138,6 +138,13 @@ export function ItemDetailView() {
       if (tracks && tracks.length > 0) updateItem(item.id, { tracklist: tracks })
     })
   }, [item?.id, settings.lastfmApiKey])
+
+  useEffect(() => {
+    if (item?.type !== 'artist' || item.coverArtUrl) return
+    fetchArtistImage(item.title).then((url) => {
+      if (url) updateItem(item.id, { coverArtUrl: url })
+    })
+  }, [item?.id])
 
   useEffect(() => {
     if (item?.type !== 'artist' || !item.mbid) return
@@ -425,8 +432,12 @@ function ArtistHeader({ item, th }: { item: import('../types').MusicItem; th: De
   const initials = getInitials(item.title)
   return (
     <div className="px-4 pt-2 pb-6 flex items-center gap-5">
-      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center text-3xl font-bold text-zinc-600 dark:text-zinc-300 flex-shrink-0 shadow-xl">
-        {initials}
+      <div className="w-24 h-24 rounded-full flex-shrink-0 shadow-xl overflow-hidden bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center">
+        {item.coverArtUrl ? (
+          <img src={item.coverArtUrl} alt={item.title} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-3xl font-bold text-zinc-600 dark:text-zinc-300">{initials}</span>
+        )}
       </div>
       <div>
         <p className={`text-2xl font-bold tracking-tight ${th.textPrimary}`}>{item.title}</p>
@@ -466,7 +477,8 @@ function ExternalLinks({ item, th }: { item: import('../types').MusicItem; th: D
   const links: { label: string; url: string; icon: string }[] = []
   if (item.wikipediaUrl) links.push({ label: 'Wikipedia', url: item.wikipediaUrl, icon: 'W' })
   if (item.pitchforkUrl) links.push({ label: 'Pitchfork', url: item.pitchforkUrl, icon: 'P' })
-  if (item.lastfmUrl) links.push({ label: 'Last.fm', url: item.lastfmUrl, icon: '♫' })
+  const lastfmUrl = item.lastfmUrl ?? (item.type !== 'playlist' ? buildLastfmUrl(item.type, item.title, item.artist) : null)
+  if (lastfmUrl) links.push({ label: 'Last.fm', url: lastfmUrl, icon: '♫' })
   if (links.length === 0) return null
 
   return (
