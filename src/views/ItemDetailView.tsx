@@ -377,14 +377,36 @@ export function ItemDetailView() {
         </div>
 
         {/* Tags */}
-        {itemTags.length > 0 && (
+        {(editing ? tags.length > 0 : itemTags.length > 0) && (
           <div className="px-5 mt-5">
             <p className={`${th.textLabel} mb-2`}>Tags</p>
-            <div className="flex flex-wrap gap-2">
-              {itemTags.map((t) => (
-                <TagChip key={t.id} tag={t} />
-              ))}
-            </div>
+            {editing ? (
+              <div className="flex flex-wrap gap-2">
+                {tags.map((t) => {
+                  const active = item.tagIds.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => updateItem(item.id, {
+                        tagIds: active
+                          ? item.tagIds.filter((id) => id !== t.id)
+                          : [...item.tagIds, t.id],
+                      })}
+                      className="text-xs px-3 py-1.5 rounded-full border transition-all"
+                      style={active ? { backgroundColor: t.color, borderColor: t.color, color: '#fff' } : { borderColor: t.color, color: t.color }}
+                    >
+                      {t.name}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {itemTags.map((t) => (
+                  <TagChip key={t.id} tag={t} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
