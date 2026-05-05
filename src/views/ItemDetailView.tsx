@@ -279,7 +279,7 @@ export function ItemDetailView() {
                 <img src={item.coverArtUrl} alt={item.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">
-                  {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : '📋'}
+                  {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : item.type === 'podcast' ? '🎙️' : '📋'}
                 </div>
               )}
             </div>
@@ -300,7 +300,7 @@ export function ItemDetailView() {
               value={item.artist ?? ''}
               onChange={(v) => updateItem(item.id, { artist: v })}
               className={`text-base mt-1 ${th.textSecondary}`}
-              placeholder="Artist"
+              placeholder={item.type === 'podcast' ? 'Show / Host' : 'Artist'}
             />
           )}
           <div className="flex items-center gap-2 flex-wrap mt-2">

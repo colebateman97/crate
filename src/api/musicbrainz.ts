@@ -241,6 +241,84 @@ export async function fetchAppleMusicMetadata(url: string): Promise<ItunesItem |
   }
 }
 
+export interface PodcastMeta {
+  title: string
+  show: string
+  host: string
+  coverArtUrl: string
+  releaseDate: string
+  isEpisode: boolean
+}
+
+export function isPodcastUrl(url: string): boolean {
+  return (
+    url.includes('podcasts.apple.com') ||
+    url.includes('open.spotify.com/show/') ||
+    url.includes('open.spotify.com/episode/')
+  )
+}
+
+export async function fetchPodcastMetadata(url: string): Promise<PodcastMeta | null> {
+  try {
+    if (url.includes('podcasts.apple.com')) {
+      const parsed = new URL(url)
+      const episodeId = parsed.searchParams.get('i')
+      const podcastIdMatch = parsed.pathname.match(/\/id(\d+)/)
+      const podcastId = podcastIdMatch?.[1]
+      if (!podcastId) return null
+
+      if (episodeId) {
+        const epRes = await fetch(`https://itunes.apple.com/lookup?id=${episodeId}`)
+        const epData = await epRes.json()
+        const ep = epData.results?.[0]
+        if (ep?.kind === 'podcast-episode') {
+          const artwork = (ep.artworkUrl600 ?? ep.artworkUrl100 ?? '').replace('100x100bb', '600x600bb')
+          return {
+            title: ep.trackName ?? '',
+            show: ep.collectionName ?? '',
+            host: ep.artistName ?? '',
+            coverArtUrl: artwork,
+            releaseDate: ep.releaseDate ? ep.releaseDate.slice(0, 10) : '',
+            isEpisode: true,
+          }
+        }
+      }
+
+      const showRes = await fetch(`https://itunes.apple.com/lookup?id=${podcastId}`)
+      const showData = await showRes.json()
+      const show = showData.results?.[0]
+      if (!show) return null
+      const artwork = (show.artworkUrl600 ?? show.artworkUrl100 ?? '').replace('100x100bb', '600x600bb')
+      return {
+        title: show.collectionName ?? show.trackName ?? '',
+        show: show.collectionName ?? show.trackName ?? '',
+        host: show.artistName ?? '',
+        coverArtUrl: artwork,
+        releaseDate: '',
+        isEpisode: false,
+      }
+    }
+
+    if (url.includes('open.spotify.com/show/') || url.includes('open.spotify.com/episode/')) {
+      const isEpisode = url.includes('/episode/')
+      const oembed = await fetchSpotifyOEmbed(url)
+      if (!oembed) return null
+      return {
+        title: oembed.title ?? '',
+        show: isEpisode ? (oembed.author_name ?? '') : (oembed.title ?? ''),
+        host: isEpisode ? '' : (oembed.author_name ?? ''),
+        coverArtUrl: oembed.thumbnail_url ?? '',
+        releaseDate: '',
+        isEpisode,
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchLastfmTracklist(
   artist: string,
   album: string,

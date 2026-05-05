@@ -1,4 +1,4 @@
-export type ItemType = 'album' | 'song' | 'artist' | 'playlist'
+export type ItemType = 'album' | 'song' | 'artist' | 'playlist' | 'podcast'
 
 export type ListenStatus = 'unlistened' | 'in_progress' | 'listened' | 'want_to_revisit'
 
@@ -79,25 +79,25 @@ export const DEFAULT_LISTS: MusicList[] = [
     id: BUILT_IN_LIST_IDS.RECOMMENDATIONS,
     name: 'Recommendations',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast'],
   },
   {
     id: BUILT_IN_LIST_IDS.NEW_RELEASES,
     name: 'New Releases',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'playlist'],
+    applicableTypes: ['album', 'song', 'playlist', 'podcast'],
   },
   {
     id: BUILT_IN_LIST_IDS.REVISITS,
     name: 'Revisits',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast'],
   },
   {
     id: BUILT_IN_LIST_IDS.DISCOVERIES,
     name: 'Discoveries',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast'],
   },
 ]
 
@@ -113,4 +113,5 @@ export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   song: 'Song',
   artist: 'Artist',
   playlist: 'Playlist',
+  podcast: 'Podcast',
 }

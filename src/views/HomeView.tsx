@@ -8,6 +8,7 @@ const CATEGORIES: { type: ItemType; label: string; emoji: string; color: string 
   { type: 'song', label: 'Songs', emoji: '🎵', color: 'from-blue-500/20 to-cyan-500/10' },
   { type: 'artist', label: 'Artists', emoji: '🎤', color: 'from-rose-500/20 to-pink-500/10' },
   { type: 'playlist', label: 'Playlists', emoji: '📋', color: 'from-amber-500/20 to-orange-500/10' },
+  { type: 'podcast', label: 'Podcasts', emoji: '🎙️', color: 'from-teal-500/20 to-emerald-500/10' },
 ]
 
 const stagger: Variants = {
@@ -84,7 +85,7 @@ function CoverThumb({ item }: { item: MusicItem }) {
         <img src={item.coverArtUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-lg opacity-50">
-          {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : item.type === 'artist' ? '🎤' : '📋'}
+          {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : item.type === 'artist' ? '🎤' : item.type === 'podcast' ? '🎙️' : '📋'}
         </div>
       )}
     </div>
