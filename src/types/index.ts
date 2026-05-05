@@ -59,6 +59,7 @@ export interface AppSettings {
     apple_music: boolean
   }
   lastfmApiKey: string
+  categoryOrder?: ItemType[]
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

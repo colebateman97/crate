@@ -1,79 +1,152 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, type Variants } from 'framer-motion'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useCrateStore } from '../store'
 import type { ItemType, MusicItem } from '../types'
 
-const CATEGORIES: { type: ItemType; label: string; emoji: string; color: string }[] = [
-  { type: 'album', label: 'Albums', emoji: '💿', color: 'from-violet-500/20 to-purple-500/10' },
-  { type: 'song', label: 'Songs', emoji: '🎵', color: 'from-blue-500/20 to-cyan-500/10' },
-  { type: 'artist', label: 'Artists', emoji: '🎤', color: 'from-rose-500/20 to-pink-500/10' },
-  { type: 'playlist', label: 'Playlists', emoji: '📋', color: 'from-amber-500/20 to-orange-500/10' },
-  { type: 'podcast', label: 'Podcasts', emoji: '🎙️', color: 'from-teal-500/20 to-emerald-500/10' },
-]
+const CATEGORY_META: Record<ItemType, { label: string; emoji: string; color: string }> = {
+  album:   { label: 'Albums',    emoji: '💿',  color: 'from-violet-500/20 to-purple-500/10' },
+  song:    { label: 'Songs',     emoji: '🎵',  color: 'from-blue-500/20 to-cyan-500/10' },
+  artist:  { label: 'Artists',   emoji: '🎤',  color: 'from-rose-500/20 to-pink-500/10' },
+  playlist:{ label: 'Playlists', emoji: '📋',  color: 'from-amber-500/20 to-orange-500/10' },
+  podcast: { label: 'Podcasts',  emoji: '🎙️', color: 'from-teal-500/20 to-emerald-500/10' },
+}
 
-const stagger: Variants = {
-  visible: { transition: { staggerChildren: 0.06 } },
-}
-const item: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
-}
+const DEFAULT_ORDER: ItemType[] = ['album', 'song', 'artist', 'playlist', 'podcast']
 
 export function HomeView() {
   const navigate = useNavigate()
   const items = useCrateStore((s) => s.items)
+  const settings = useCrateStore((s) => s.settings)
+  const updateSettings = useCrateStore((s) => s.updateSettings)
+  const [isReordering, setIsReordering] = useState(false)
+
+  const order = settings.categoryOrder ?? DEFAULT_ORDER
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      const oldIndex = order.indexOf(active.id as ItemType)
+      const newIndex = order.indexOf(over.id as ItemType)
+      updateSettings({ categoryOrder: arrayMove(order, oldIndex, newIndex) })
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* Header */}
-      <div className="px-5 pt-14 pb-6 md:pt-8">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Crate</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Your music backlog</p>
+      <div className="px-5 pt-14 pb-6 md:pt-8 flex items-end justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Crate</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Your music backlog</p>
+        </div>
+        <button
+          onClick={() => setIsReordering((v) => !v)}
+          className="text-sm font-medium text-violet-500 dark:text-violet-400 pb-1"
+        >
+          {isReordering ? 'Done' : 'Edit'}
+        </button>
       </div>
 
-      {/* Category grid */}
-      <motion.div
-        className="grid grid-cols-2 gap-3 px-4 pb-28 md:pb-8"
-        variants={stagger}
-        initial="hidden"
-        animate="visible"
-      >
-        {CATEGORIES.map(({ type, label, emoji, color }) => {
-          const typeItems = items.filter((i) => i.type === type)
-          const unlistened = typeItems.filter((i) => i.listenStatus === 'unlistened').length
-          const recent = typeItems.slice(0, 4)
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={order} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-2 gap-3 px-4 pb-28 md:pb-8">
+            {order.map((type) => (
+              <SortableCategoryCard
+                key={type}
+                type={type}
+                allItems={items}
+                isReordering={isReordering}
+                onClick={() => navigate(`/category/${type}`)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  )
+}
 
-          return (
-            <motion.button
-              key={type}
-              variants={item}
-              className={`relative overflow-hidden backdrop-blur-sm border border-white/10 dark:border-white/5 rounded-2xl p-4 text-left cursor-pointer`}
-              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
-              onClick={() => navigate(`/category/${type}`)}
-              whileTap={{ scale: 0.97 }}
-            >
-              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${color} opacity-70 pointer-events-none`} />
-              <div className="relative">
-                <span className="text-2xl">{emoji}</span>
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mt-2">{label}</h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  {typeItems.length} item{typeItems.length !== 1 ? 's' : ''}
-                  {unlistened > 0 && ` · ${unlistened} new`}
-                </p>
+interface CardProps {
+  type: ItemType
+  allItems: MusicItem[]
+  isReordering: boolean
+  onClick: () => void
+}
 
-                {/* Cover art strip */}
-                {recent.length > 0 && (
-                  <div className="flex gap-1.5 mt-3 -mx-1">
-                    {recent.map((ri) => (
-                      <CoverThumb key={ri.id} item={ri} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.button>
-          )
-        })}
-      </motion.div>
+function SortableCategoryCard({ type, allItems, isReordering, onClick }: CardProps) {
+  const { label, emoji, color } = CATEGORY_META[type]
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: type,
+    disabled: !isReordering,
+  })
+
+  const typeItems = allItems.filter((i) => i.type === type)
+  const unlistened = typeItems.filter((i) => i.listenStatus === 'unlistened').length
+  const recent = typeItems.slice(0, 4)
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition ?? undefined,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        zIndex: isDragging ? 10 : undefined,
+      }}
+      className={[
+        'relative overflow-hidden backdrop-blur-sm rounded-2xl p-4 text-left select-none',
+        isReordering
+          ? 'border-2 border-violet-400/40 dark:border-violet-500/30 cursor-grab active:cursor-grabbing'
+          : 'border border-white/10 dark:border-white/5 cursor-pointer',
+        isDragging ? 'shadow-2xl opacity-80' : '',
+      ].join(' ')}
+      onClick={isReordering ? undefined : onClick}
+      {...(isReordering ? { ...attributes, ...listeners } : {})}
+    >
+      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${color} opacity-70 pointer-events-none`} />
+      <div className="relative">
+        <div className="flex items-start justify-between">
+          <span className="text-2xl">{emoji}</span>
+          {isReordering && (
+            <span className="text-zinc-400 dark:text-zinc-500 text-xl leading-none mt-0.5">☰</span>
+          )}
+        </div>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mt-2">{label}</h2>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+          {typeItems.length} item{typeItems.length !== 1 ? 's' : ''}
+          {unlistened > 0 && ` · ${unlistened} new`}
+        </p>
+        {recent.length > 0 && (
+          <div className="flex gap-1.5 mt-3 -mx-1">
+            {recent.map((ri) => (
+              <CoverThumb key={ri.id} item={ri} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
