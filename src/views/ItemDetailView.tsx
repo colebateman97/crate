@@ -507,7 +507,7 @@ function ExternalLinks({ item, th }: { item: import('../types').MusicItem; th: D
   const links: { label: string; url: string; icon: string }[] = []
   if (item.wikipediaUrl) links.push({ label: 'Wikipedia', url: item.wikipediaUrl, icon: 'W' })
   if (item.pitchforkUrl) links.push({ label: 'Pitchfork', url: item.pitchforkUrl, icon: 'P' })
-  const lastfmUrl = item.lastfmUrl ?? (item.type !== 'playlist' ? buildLastfmUrl(item.type, item.title, item.artist) : null)
+  const lastfmUrl = item.lastfmUrl ?? (item.type !== 'playlist' && item.type !== 'podcast' ? buildLastfmUrl(item.type, item.title, item.artist) : null)
   if (lastfmUrl) links.push({ label: 'Last.fm', url: lastfmUrl, icon: '♫' })
   if (links.length === 0) return null
 
