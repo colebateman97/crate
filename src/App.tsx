@@ -31,7 +31,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const url = params.get('url') || params.get('text')
-    if (url && (url.includes('spotify.com') || url.includes('apple.com') || url.includes('music.apple.com'))) {
+    if (url && (url.includes('spotify.com') || url.includes('apple.com') || url.includes('music.apple.com') || url.includes('youtube.com') || url.includes('youtu.be'))) {
       setShareUrl(url)
       setAddOpen(true)
       window.history.replaceState({}, '', window.location.pathname)
