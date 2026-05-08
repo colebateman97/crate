@@ -39,7 +39,10 @@ export function HomeView() {
   const updateSettings = useCrateStore((s) => s.updateSettings)
   const [isReordering, setIsReordering] = useState(false)
 
-  const order = settings.categoryOrder ?? DEFAULT_ORDER
+  const savedOrder = settings.categoryOrder ?? []
+  const order = savedOrder.length === 0
+    ? DEFAULT_ORDER
+    : [...savedOrder, ...DEFAULT_ORDER.filter((t) => !savedOrder.includes(t))]
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
