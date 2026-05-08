@@ -27,9 +27,10 @@ const CATEGORY_META: Record<ItemType, { label: string; emoji: string; color: str
   artist:  { label: 'Artists',   emoji: '🎤',  color: 'from-rose-500/20 to-pink-500/10' },
   playlist:{ label: 'Playlists', emoji: '📋',  color: 'from-amber-500/20 to-orange-500/10' },
   podcast: { label: 'Podcasts',  emoji: '🎙️', color: 'from-teal-500/20 to-emerald-500/10' },
+  video:   { label: 'Videos',    emoji: '🎬',  color: 'from-red-500/20 to-rose-500/10' },
 }
 
-const DEFAULT_ORDER: ItemType[] = ['album', 'song', 'artist', 'playlist', 'podcast']
+const DEFAULT_ORDER: ItemType[] = ['album', 'song', 'artist', 'playlist', 'podcast', 'video']
 
 export function HomeView() {
   const navigate = useNavigate()
@@ -158,7 +159,7 @@ function CoverThumb({ item }: { item: MusicItem }) {
         <img src={item.coverArtUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-lg opacity-50">
-          {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : item.type === 'artist' ? '🎤' : item.type === 'podcast' ? '🎙️' : '📋'}
+          {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : item.type === 'artist' ? '🎤' : item.type === 'podcast' ? '🎙️' : item.type === 'video' ? '🎬' : '📋'}
         </div>
       )}
     </div>

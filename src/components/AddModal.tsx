@@ -7,6 +7,7 @@ import {
   fetchSpotifyOEmbed, detectSpotifyType, detectAppleMusicType,
   fetchAppleMusicMetadata, searchItunesMetadata,
   getCoverArtUrl, isPodcastUrl, fetchPodcastMetadata,
+  isYoutubeUrl, fetchYoutubeMetadata,
 } from '../api/musicbrainz'
 import type { MBRelease, MBRecording, MBArtist } from '../api/musicbrainz'
 import { generateId, getRandomTagColor } from '../utils'
@@ -29,7 +30,7 @@ interface FormState {
   genre: string
   coverArtUrl: string
   sourceUrl: string
-  sourcePlatform: 'spotify' | 'apple_music' | 'manual'
+  sourcePlatform: 'spotify' | 'apple_music' | 'youtube' | 'manual'
   listenStatus: ListenStatus
   recommendedBy: string
   recommendationNote: string
@@ -88,6 +89,30 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
   async function handleUrlParse(url: string) {
     const spotifyType = detectSpotifyType(url)
     const appleMusicType = detectAppleMusicType(url)
+
+    if (isYoutubeUrl(url)) {
+      setLoading(true)
+      try {
+        const meta = await fetchYoutubeMetadata(url)
+        if (meta) {
+          setForm((f) => ({
+            ...f,
+            type: 'video',
+            title: meta.title,
+            artist: meta.channel,
+            releaseDate: '',
+            genre: '',
+            coverArtUrl: meta.thumbnailUrl,
+            sourceUrl: url,
+            sourcePlatform: 'youtube',
+          }))
+          setStep('details')
+        }
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
 
     if (isPodcastUrl(url)) {
       setLoading(true)
@@ -340,8 +365,8 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                       {/* Type selector */}
                       <div>
                         <label className="text-xs text-zinc-400 uppercase tracking-wider mb-2 block">Type</label>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {(['album', 'song', 'artist', 'playlist', 'podcast'] as ItemType[]).map((t) => (
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(['album', 'song', 'artist', 'playlist', 'podcast', 'video'] as ItemType[]).map((t) => (
                             <button
                               key={t}
                               onClick={() => f('type', t)}
@@ -364,7 +389,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                           <input
                             value={urlInput}
                             onChange={(e) => setUrlInput(e.target.value)}
-                            placeholder="Spotify, Apple Music, or Apple Podcasts URL…"
+                            placeholder="Spotify, Apple Music, Podcasts, or YouTube URL…"
                             className="flex-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
                           />
                           <button
@@ -386,6 +411,8 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                       {/* Manual search */}
                       {form.type === 'podcast' ? (
                         <p className="text-xs text-zinc-400 text-center">Paste an Apple Podcasts or Spotify link above to auto-fill details.</p>
+                      ) : form.type === 'video' ? (
+                        <p className="text-xs text-zinc-400 text-center">Paste a YouTube link above to auto-fill details.</p>
                       ) : (
                         <div>
                           <input
@@ -442,11 +469,11 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                       </FormField>
 
                       {form.type !== 'artist' && (
-                        <FormField label={form.type === 'podcast' ? 'Show / Host' : 'Artist'}>
+                        <FormField label={form.type === 'podcast' ? 'Show / Host' : form.type === 'video' ? 'Channel' : 'Artist'}>
                           <input
                             value={form.artist}
                             onChange={(e) => f('artist', e.target.value)}
-                            placeholder={form.type === 'podcast' ? 'Show name or host' : 'Artist name'}
+                            placeholder={form.type === 'podcast' ? 'Show name or host' : form.type === 'video' ? 'Channel name' : 'Artist name'}
                             className={inputCls}
                           />
                         </FormField>

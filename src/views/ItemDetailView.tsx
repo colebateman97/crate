@@ -272,6 +272,16 @@ export function ItemDetailView() {
         {/* Cover art */}
         {item.type === 'artist' ? (
           <ArtistHeader item={item} th={th} />
+        ) : item.type === 'video' ? (
+          <div className="px-4 pt-2 pb-6">
+            <div className="mx-auto w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl bg-zinc-200 dark:bg-zinc-800 aspect-video">
+              {item.coverArtUrl ? (
+                <img src={item.coverArtUrl} alt={item.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">🎬</div>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="px-4 pt-2 pb-6">
             <div className="mx-auto w-52 h-52 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-2xl bg-zinc-200 dark:bg-zinc-800">
@@ -300,7 +310,7 @@ export function ItemDetailView() {
               value={item.artist ?? ''}
               onChange={(v) => updateItem(item.id, { artist: v })}
               className={`text-base mt-1 ${th.textSecondary}`}
-              placeholder={item.type === 'podcast' ? 'Show / Host' : 'Artist'}
+              placeholder={item.type === 'podcast' ? 'Show / Host' : item.type === 'video' ? 'Channel' : 'Artist'}
             />
           )}
           <div className="flex items-center gap-2 flex-wrap mt-2">
@@ -507,7 +517,7 @@ function ExternalLinks({ item, th }: { item: import('../types').MusicItem; th: D
   const links: { label: string; url: string; icon: string }[] = []
   if (item.wikipediaUrl) links.push({ label: 'Wikipedia', url: item.wikipediaUrl, icon: 'W' })
   if (item.pitchforkUrl) links.push({ label: 'Pitchfork', url: item.pitchforkUrl, icon: 'P' })
-  const lastfmUrl = item.lastfmUrl ?? (item.type !== 'playlist' && item.type !== 'podcast' ? buildLastfmUrl(item.type, item.title, item.artist) : null)
+  const lastfmUrl = item.lastfmUrl ?? (item.type !== 'playlist' && item.type !== 'podcast' && item.type !== 'video' ? buildLastfmUrl(item.type, item.title, item.artist) : null)
   if (lastfmUrl) links.push({ label: 'Last.fm', url: lastfmUrl, icon: '♫' })
   if (links.length === 0) return null
 
@@ -536,16 +546,20 @@ function PlatformLinks({ item, settings }: { item: import('../types').MusicItem;
   const query = item.artist ? `${item.title} ${item.artist}` : item.title
   const links: { label: string; url: string; color: string }[] = []
 
-  if (item.sourceUrl && item.sourcePlatform === 'spotify' && settings.platforms.spotify) {
-    links.push({ label: 'Open in Spotify', url: item.sourceUrl, color: '#1DB954' })
-  } else if (settings.platforms.spotify) {
-    links.push({ label: 'Search Spotify', url: buildSpotifyDeepLink(query, item.type), color: '#1DB954' })
-  }
+  if (item.type === 'video') {
+    if (item.sourceUrl) links.push({ label: 'Watch on YouTube', url: item.sourceUrl, color: '#FF0000' })
+  } else {
+    if (item.sourceUrl && item.sourcePlatform === 'spotify' && settings.platforms.spotify) {
+      links.push({ label: 'Open in Spotify', url: item.sourceUrl, color: '#1DB954' })
+    } else if (settings.platforms.spotify) {
+      links.push({ label: 'Search Spotify', url: buildSpotifyDeepLink(query, item.type), color: '#1DB954' })
+    }
 
-  if (item.sourceUrl && item.sourcePlatform === 'apple_music' && settings.platforms.apple_music) {
-    links.push({ label: 'Open in Apple Music', url: item.sourceUrl, color: '#FA2C55' })
-  } else if (settings.platforms.apple_music) {
-    links.push({ label: 'Search Apple Music', url: buildAppleMusicDeepLink(query, item.type), color: '#FA2C55' })
+    if (item.sourceUrl && item.sourcePlatform === 'apple_music' && settings.platforms.apple_music) {
+      links.push({ label: 'Open in Apple Music', url: item.sourceUrl, color: '#FA2C55' })
+    } else if (settings.platforms.apple_music) {
+      links.push({ label: 'Search Apple Music', url: buildAppleMusicDeepLink(query, item.type), color: '#FA2C55' })
+    }
   }
 
   if (links.length === 0) return null

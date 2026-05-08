@@ -319,6 +319,51 @@ export async function fetchPodcastMetadata(url: string): Promise<PodcastMeta | n
   }
 }
 
+export function isYoutubeUrl(url: string): boolean {
+  return (
+    url.includes('youtube.com/watch') ||
+    url.includes('youtu.be/') ||
+    url.includes('youtube.com/shorts/')
+  )
+}
+
+function extractYoutubeId(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname.includes('youtube.com')) {
+      if (parsed.pathname.startsWith('/shorts/')) return parsed.pathname.split('/shorts/')[1]?.split('/')[0] ?? null
+      return parsed.searchParams.get('v')
+    }
+    if (parsed.hostname === 'youtu.be') return parsed.pathname.slice(1).split('?')[0]
+  } catch {}
+  return null
+}
+
+export interface YoutubeMeta {
+  title: string
+  channel: string
+  thumbnailUrl: string
+}
+
+export async function fetchYoutubeMetadata(url: string): Promise<YoutubeMeta | null> {
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`)
+    if (!res.ok) return null
+    const data = await res.json()
+    const videoId = extractYoutubeId(url)
+    const thumbnailUrl = videoId
+      ? `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`
+      : (data.thumbnail_url ?? '')
+    return {
+      title: data.title ?? '',
+      channel: data.author_name ?? '',
+      thumbnailUrl,
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function fetchLastfmTracklist(
   artist: string,
   album: string,

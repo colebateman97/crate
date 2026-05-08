@@ -1,8 +1,8 @@
-export type ItemType = 'album' | 'song' | 'artist' | 'playlist' | 'podcast'
+export type ItemType = 'album' | 'song' | 'artist' | 'playlist' | 'podcast' | 'video'
 
 export type ListenStatus = 'unlistened' | 'in_progress' | 'listened' | 'want_to_revisit'
 
-export type SourcePlatform = 'spotify' | 'apple_music' | 'manual'
+export type SourcePlatform = 'spotify' | 'apple_music' | 'youtube' | 'manual'
 
 export interface MusicItem {
   id: string
@@ -80,25 +80,25 @@ export const DEFAULT_LISTS: MusicList[] = [
     id: BUILT_IN_LIST_IDS.RECOMMENDATIONS,
     name: 'Recommendations',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video'],
   },
   {
     id: BUILT_IN_LIST_IDS.NEW_RELEASES,
     name: 'New Releases',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'playlist', 'podcast'],
+    applicableTypes: ['album', 'song', 'playlist', 'podcast', 'video'],
   },
   {
     id: BUILT_IN_LIST_IDS.REVISITS,
     name: 'Revisits',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video'],
   },
   {
     id: BUILT_IN_LIST_IDS.DISCOVERIES,
     name: 'Discoveries',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video'],
   },
 ]
 
@@ -115,4 +115,5 @@ export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   artist: 'Artist',
   playlist: 'Playlist',
   podcast: 'Podcast',
+  video: 'Video',
 }
