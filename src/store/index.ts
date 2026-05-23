@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { MusicItem, MusicList, Tag, AppSettings } from '../types'
 import { DEFAULT_LISTS, DEFAULT_SETTINGS } from '../types'
+import { getStoredSyncKey, pushToCloud } from '../lib/sync'
 
 interface CrateStore {
   items: MusicItem[]
@@ -96,8 +97,13 @@ export const useCrateStore = create<CrateStore>()(
         }
       },
 
-      clearAllData: () =>
-        set({ items: [], lists: DEFAULT_LISTS, tags: [], settings: DEFAULT_SETTINGS }),
+      clearAllData: () => {
+        set({ items: [], lists: DEFAULT_LISTS, tags: [], settings: DEFAULT_SETTINGS })
+        const syncKey = getStoredSyncKey()
+        if (syncKey) {
+          pushToCloud(syncKey, { items: [], lists: DEFAULT_LISTS, tags: [], settings: DEFAULT_SETTINGS })
+        }
+      },
     }),
     {
       name: 'crate-data',

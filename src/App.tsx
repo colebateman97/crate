@@ -8,6 +8,8 @@ import { AnimatedBackground } from './components/AnimatedBackground'
 import { BottomNav, SideNav } from './components/Nav'
 import { AddFAB } from './components/AddButton'
 import { AddModal } from './components/AddModal'
+import { useCrateStore } from './store'
+import { getOrCreateSyncKey, pullFromCloud, pushToCloud, schedulePush } from './lib/sync'
 
 import { HomeView } from './views/HomeView'
 import { CategoryView } from './views/CategoryView'
@@ -36,6 +38,32 @@ export default function App() {
       setAddOpen(true)
       window.history.replaceState({}, '', window.location.pathname)
     }
+  }, [])
+
+  // Cloud sync
+  useEffect(() => {
+    const syncKey = getOrCreateSyncKey()
+    const state = useCrateStore.getState()
+
+    if (state.items.length > 0) {
+      // Local has data — push to keep cloud current
+      const { items, lists, tags, settings } = state
+      pushToCloud(syncKey, { items, lists, tags, settings })
+    } else {
+      // Local is empty — try to restore from cloud
+      pullFromCloud(syncKey).then((cloudData) => {
+        if (cloudData && (cloudData as { items?: unknown[] }).items?.length) {
+          useCrateStore.getState().importData(JSON.stringify(cloudData))
+        }
+      })
+    }
+
+    // Push future changes automatically
+    const unsubscribe = useCrateStore.subscribe((state) => {
+      const { items, lists, tags, settings } = state
+      schedulePush(syncKey, { items, lists, tags, settings })
+    })
+    return unsubscribe
   }, [])
 
   return (

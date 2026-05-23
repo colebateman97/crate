@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useCrateStore } from '../store'
 import { downloadJson, generateId, getRandomTagColor } from '../utils'
 import { TagChip } from '../components/TagChip'
+import { getOrCreateSyncKey, storeSyncKey, pullFromCloud } from '../lib/sync'
 
 export function SettingsView() {
   const { settings, updateSettings, tags, addTag, updateTag, deleteTag, lists, addList, deleteList, exportData, importData, clearAllData } = useCrateStore()
@@ -12,6 +13,10 @@ export function SettingsView() {
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [newListName, setNewListName] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [syncKey] = useState(() => getOrCreateSyncKey())
+  const [syncKeyCopied, setSyncKeyCopied] = useState(false)
+  const [restoreKey, setRestoreKey] = useState('')
+  const [restoreStatus, setRestoreStatus] = useState<'idle' | 'loading' | 'success' | 'notfound' | 'error'>('idle')
 
   function handleExport() {
     const data = exportData()
@@ -51,6 +56,30 @@ export function SettingsView() {
   function handleClear() {
     clearAllData()
     setConfirmClear(false)
+  }
+
+  function handleCopySyncKey() {
+    navigator.clipboard.writeText(syncKey)
+    setSyncKeyCopied(true)
+    setTimeout(() => setSyncKeyCopied(false), 2000)
+  }
+
+  async function handleRestore() {
+    if (!restoreKey.trim()) return
+    setRestoreStatus('loading')
+    try {
+      const cloudData = await pullFromCloud(restoreKey.trim().toLowerCase())
+      if (!cloudData) {
+        setRestoreStatus('notfound')
+        return
+      }
+      storeSyncKey(restoreKey.trim().toLowerCase())
+      importData(JSON.stringify(cloudData))
+      setRestoreStatus('success')
+      setRestoreKey('')
+    } catch {
+      setRestoreStatus('error')
+    }
   }
 
   function addNewTag() {
@@ -212,6 +241,50 @@ export function SettingsView() {
             >
               Add
             </button>
+          </div>
+        </Section>
+
+        {/* Cloud Sync */}
+        <Section title="Cloud Sync">
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-zinc-400">
+              Your data syncs automatically. Save your sync key somewhere safe — if you ever lose your data, entering it here will restore everything from the cloud.
+            </p>
+            <div>
+              <label className={labelCls}>Your sync key</label>
+              <div className="flex gap-2 items-center">
+                <code className="flex-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-sm font-mono text-zinc-700 dark:text-zinc-300 tracking-wider">
+                  {syncKey}
+                </code>
+                <button
+                  onClick={handleCopySyncKey}
+                  className="px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex-shrink-0"
+                >
+                  {syncKeyCopied ? '✓' : 'Copy'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Restore from a different sync key</label>
+              <div className="flex gap-2">
+                <input
+                  value={restoreKey}
+                  onChange={(e) => { setRestoreKey(e.target.value); setRestoreStatus('idle') }}
+                  placeholder="crate-xxxx-xxxx-xxxx"
+                  className={`${inputCls} flex-1 font-mono`}
+                />
+                <button
+                  onClick={handleRestore}
+                  disabled={!restoreKey.trim() || restoreStatus === 'loading'}
+                  className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300 disabled:opacity-40 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex-shrink-0"
+                >
+                  {restoreStatus === 'loading' ? '…' : 'Restore'}
+                </button>
+              </div>
+              {restoreStatus === 'success' && <p className="text-xs text-emerald-500 mt-1.5">Restored successfully.</p>}
+              {restoreStatus === 'notfound' && <p className="text-xs text-red-400 mt-1.5">No data found for that key. Double-check and try again.</p>}
+              {restoreStatus === 'error' && <p className="text-xs text-red-400 mt-1.5">Something went wrong. Check your connection and try again.</p>}
+            </div>
           </div>
         </Section>
 
