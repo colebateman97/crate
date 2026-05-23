@@ -42,28 +42,31 @@ export default function App() {
 
   // Cloud sync
   useEffect(() => {
-    const syncKey = getOrCreateSyncKey()
-    const state = useCrateStore.getState()
+    try {
+      const syncKey = getOrCreateSyncKey()
+      const state = useCrateStore.getState()
 
-    if (state.items.length > 0) {
-      // Local has data — push to keep cloud current
-      const { items, lists, tags, settings } = state
-      pushToCloud(syncKey, { items, lists, tags, settings })
-    } else {
-      // Local is empty — try to restore from cloud
-      pullFromCloud(syncKey).then((cloudData) => {
-        if (cloudData && (cloudData as { items?: unknown[] }).items?.length) {
-          useCrateStore.getState().importData(JSON.stringify(cloudData))
-        }
+      if (state.items.length > 0) {
+        const { items, lists, tags, settings } = state
+        pushToCloud(syncKey, { items, lists, tags, settings })
+      } else {
+        pullFromCloud(syncKey).then((cloudData) => {
+          if (cloudData && (cloudData as { items?: unknown[] }).items?.length) {
+            useCrateStore.getState().importData(JSON.stringify(cloudData))
+          }
+        }).catch(() => {})
+      }
+
+      const unsubscribe = useCrateStore.subscribe((state) => {
+        try {
+          const { items, lists, tags, settings } = state
+          schedulePush(syncKey, { items, lists, tags, settings })
+        } catch {}
       })
+      return unsubscribe
+    } catch (e) {
+      console.error('Sync init failed:', e)
     }
-
-    // Push future changes automatically
-    const unsubscribe = useCrateStore.subscribe((state) => {
-      const { items, lists, tags, settings } = state
-      schedulePush(syncKey, { items, lists, tags, settings })
-    })
-    return unsubscribe
   }, [])
 
   return (

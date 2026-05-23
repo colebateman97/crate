@@ -25,29 +25,35 @@ export function storeSyncKey(key: string): void {
 }
 
 export async function pushToCloud(syncKey: string, data: object): Promise<boolean> {
-  const { error } = await supabase.from('crate_sync').upsert({
-    sync_key: syncKey,
-    data,
-    updated_at: new Date().toISOString(),
-  })
-  if (error) {
-    console.error('Sync push failed:', error.message)
+  if (!supabase) return false
+  try {
+    const { error } = await supabase.from('crate_sync').upsert({
+      sync_key: syncKey,
+      data,
+      updated_at: new Date().toISOString(),
+    })
+    if (error) { console.error('Sync push failed:', error.message); return false }
+    return true
+  } catch (e) {
+    console.error('Sync push exception:', e)
     return false
   }
-  return true
 }
 
 export async function pullFromCloud(syncKey: string): Promise<object | null> {
-  const { data, error } = await supabase
-    .from('crate_sync')
-    .select('data')
-    .eq('sync_key', syncKey)
-    .maybeSingle()
-  if (error) {
-    console.error('Sync pull failed:', error.message)
+  if (!supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('crate_sync')
+      .select('data')
+      .eq('sync_key', syncKey)
+      .maybeSingle()
+    if (error) { console.error('Sync pull failed:', error.message); return null }
+    return data?.data ?? null
+  } catch (e) {
+    console.error('Sync pull exception:', e)
     return null
   }
-  return data?.data ?? null
 }
 
 let pushTimeout: ReturnType<typeof setTimeout> | null = null
