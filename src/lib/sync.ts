@@ -25,7 +25,6 @@ export function storeSyncKey(key: string): void {
 }
 
 export async function pushToCloud(syncKey: string, data: object): Promise<boolean> {
-  if (!supabase) return false
   try {
     const { error } = await supabase.from('crate_sync').upsert({
       sync_key: syncKey,
@@ -41,7 +40,6 @@ export async function pushToCloud(syncKey: string, data: object): Promise<boolea
 }
 
 export async function pullFromCloud(syncKey: string): Promise<object | null> {
-  if (!supabase) return null
   try {
     const { data, error } = await supabase
       .from('crate_sync')
