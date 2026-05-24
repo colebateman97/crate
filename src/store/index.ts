@@ -4,6 +4,13 @@ import type { MusicItem, MusicList, Tag, AppSettings } from '../types'
 import { DEFAULT_LISTS, DEFAULT_SETTINGS } from '../types'
 import { getStoredSyncKey, pushToCloud } from '../lib/sync'
 
+function syncNow(get: () => { items: MusicItem[]; lists: MusicList[]; tags: Tag[]; settings: AppSettings }) {
+  const syncKey = getStoredSyncKey()
+  if (!syncKey) return
+  const { items, lists, tags, settings } = get()
+  pushToCloud(syncKey, { items, lists, tags, settings })
+}
+
 interface CrateStore {
   items: MusicItem[]
   lists: MusicList[]
@@ -43,10 +50,18 @@ export const useCrateStore = create<CrateStore>()(
       tags: [],
       settings: DEFAULT_SETTINGS,
 
-      addItem: (item) => set((s) => ({ items: [item, ...s.items] })),
-      updateItem: (id, updates) =>
-        set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, ...updates } : i)) })),
-      deleteItem: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
+      addItem: (item) => {
+        set((s) => ({ items: [item, ...s.items] }))
+        syncNow(get)
+      },
+      updateItem: (id, updates) => {
+        set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, ...updates } : i)) }))
+        syncNow(get)
+      },
+      deleteItem: (id) => {
+        set((s) => ({ items: s.items.filter((i) => i.id !== id) }))
+        syncNow(get)
+      },
       getItemById: (id) => get().items.find((i) => i.id === id),
 
       addList: (list) => set((s) => ({ lists: [...s.lists, list] })),
@@ -110,33 +125,38 @@ export const useCrateStore = create<CrateStore>()(
       storage: createJSONStorage(() => localStorage),
       version: 3,
       migrate: (state: unknown, version: number) => {
-        const s = state as { items?: MusicItem[]; lists?: MusicList[]; tags?: Tag[]; settings?: AppSettings }
-        if (version < 1) {
-          const lists: MusicList[] = s.lists ?? []
-          for (const defaultList of DEFAULT_LISTS) {
-            if (defaultList.isBuiltIn && !lists.some((l) => l.id === defaultList.id)) {
-              lists.push(defaultList)
+        try {
+          const s = state as { items?: MusicItem[]; lists?: MusicList[]; tags?: Tag[]; settings?: AppSettings }
+          if (version < 1) {
+            const lists: MusicList[] = s.lists ?? []
+            for (const defaultList of DEFAULT_LISTS) {
+              if (defaultList.isBuiltIn && !lists.some((l) => l.id === defaultList.id)) {
+                lists.push(defaultList)
+              }
             }
+            s.lists = lists
           }
-          s.lists = lists
+          if (version < 2) {
+            s.lists = (s.lists ?? []).map((l) => ({
+              ...l,
+              applicableTypes: l.applicableTypes?.includes('podcast')
+                ? l.applicableTypes
+                : [...(l.applicableTypes ?? []), 'podcast'],
+            }))
+          }
+          if (version < 3) {
+            s.lists = (s.lists ?? []).map((l) => ({
+              ...l,
+              applicableTypes: l.applicableTypes?.includes('video')
+                ? l.applicableTypes
+                : [...(l.applicableTypes ?? []), 'video'],
+            }))
+          }
+          return s
+        } catch (err) {
+          console.error('Migration failed, preserving state as-is:', err)
+          return state
         }
-        if (version < 2) {
-          s.lists = (s.lists ?? []).map((l) => ({
-            ...l,
-            applicableTypes: l.applicableTypes.includes('podcast')
-              ? l.applicableTypes
-              : [...l.applicableTypes, 'podcast'],
-          }))
-        }
-        if (version < 3) {
-          s.lists = (s.lists ?? []).map((l) => ({
-            ...l,
-            applicableTypes: l.applicableTypes.includes('video')
-              ? l.applicableTypes
-              : [...l.applicableTypes, 'video'],
-          }))
-        }
-        return s
       },
     }
   )
