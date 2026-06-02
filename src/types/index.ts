@@ -1,4 +1,4 @@
-export type ItemType = 'album' | 'song' | 'artist' | 'playlist' | 'podcast' | 'video'
+export type ItemType = 'album' | 'song' | 'artist' | 'playlist' | 'podcast' | 'video' | 'movie' | 'show'
 
 export type ListenStatus = 'unlistened' | 'in_progress' | 'listened' | 'want_to_revisit'
 
@@ -35,6 +35,13 @@ export interface MusicItem {
   mbid?: string
   artistMbid?: string
 
+  // Movie / Show specific
+  runtime?: string
+  language?: string
+  seasonCount?: number
+  airDates?: string
+  tmdbId?: number
+
   dateAdded: string
   dateListened?: string
 }
@@ -59,6 +66,7 @@ export interface AppSettings {
     apple_music: boolean
   }
   lastfmApiKey: string
+  tmdbApiKey?: string
   categoryOrder?: ItemType[]
 }
 
@@ -66,6 +74,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   platforms: { spotify: true, apple_music: false },
   lastfmApiKey: '',
+  tmdbApiKey: '',
 }
 
 export const BUILT_IN_LIST_IDS = {
@@ -80,25 +89,25 @@ export const DEFAULT_LISTS: MusicList[] = [
     id: BUILT_IN_LIST_IDS.RECOMMENDATIONS,
     name: 'Recommendations',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'],
   },
   {
     id: BUILT_IN_LIST_IDS.NEW_RELEASES,
     name: 'New Releases',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'playlist', 'podcast', 'video'],
+    applicableTypes: ['album', 'song', 'playlist', 'podcast', 'video', 'movie', 'show'],
   },
   {
     id: BUILT_IN_LIST_IDS.REVISITS,
     name: 'Revisits',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'],
   },
   {
     id: BUILT_IN_LIST_IDS.DISCOVERIES,
     name: 'Discoveries',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'],
   },
 ]
 
@@ -116,4 +125,6 @@ export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   playlist: 'Playlist',
   podcast: 'Podcast',
   video: 'Video',
+  movie: 'Movie',
+  show: 'Show',
 }

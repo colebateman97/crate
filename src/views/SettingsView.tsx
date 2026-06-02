@@ -94,7 +94,7 @@ export function SettingsView() {
       id: generateId(),
       name: newListName.trim(),
       isBuiltIn: false,
-      applicableTypes: ['album', 'song', 'artist', 'playlist'],
+      applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'],
     })
     setNewListName('')
   }
@@ -145,6 +145,23 @@ export function SettingsView() {
 
         {/* API Keys */}
         <Section title="API Keys">
+          <div>
+            <label className={labelCls}>TMDB API Key</label>
+            <input
+              value={settings.tmdbApiKey ?? ''}
+              onChange={(e) => updateSettings({ tmdbApiKey: e.target.value })}
+              placeholder="Enter your TMDB API key"
+              type="password"
+              className={inputCls}
+            />
+            <p className="text-xs text-zinc-400 mt-1.5">
+              Required to search for movies and shows. Get a free key at{' '}
+              <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="underline">
+                themoviedb.org
+              </a>
+              {' '}(free account required). Stored locally only.
+            </p>
+          </div>
           <div>
             <label className={labelCls}>Last.fm API Key</label>
             <input

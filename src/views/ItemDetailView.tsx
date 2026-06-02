@@ -8,8 +8,21 @@ import { StarRating } from '../components/StarRating'
 import { getInitials, buildSpotifyDeepLink, buildAppleMusicDeepLink, formatYear } from '../utils'
 import { getArtistDiscography, getReleaseGroupCoverArt, fetchLastfmTracklist, fetchArtistImage, buildLastfmUrl, getWikipediaUrl } from '../api/musicbrainz'
 import type { MBReleaseGroup } from '../api/musicbrainz'
-import type { ListenStatus } from '../types'
+import type { ListenStatus, ItemType } from '../types'
 import { LISTEN_STATUS_LABELS } from '../types'
+
+function getStatusLabel(status: ListenStatus, type: ItemType): string {
+  if (type === 'movie' || type === 'show' || type === 'video') {
+    const map: Record<ListenStatus, string> = {
+      unlistened: 'Unwatched',
+      in_progress: 'Watching',
+      listened: 'Watched',
+      want_to_revisit: 'Want to Rewatch',
+    }
+    return map[status]
+  }
+  return LISTEN_STATUS_LABELS[status]
+}
 
 const fac = new FastAverageColor()
 
@@ -282,6 +295,18 @@ export function ItemDetailView() {
               )}
             </div>
           </div>
+        ) : (item.type === 'movie' || item.type === 'show') ? (
+          <div className="px-4 pt-2 pb-6 flex justify-center">
+            <div className="w-40 sm:w-48 rounded-2xl overflow-hidden shadow-2xl bg-zinc-200 dark:bg-zinc-800" style={{ aspectRatio: '2/3' }}>
+              {item.coverArtUrl ? (
+                <img src={item.coverArtUrl} alt={item.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">
+                  {item.type === 'movie' ? '🎥' : '📺'}
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="px-4 pt-2 pb-6">
             <div className="mx-auto w-52 h-52 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-2xl bg-zinc-200 dark:bg-zinc-800">
@@ -310,12 +335,30 @@ export function ItemDetailView() {
               value={item.artist ?? ''}
               onChange={(v) => updateItem(item.id, { artist: v })}
               className={`text-base mt-1 ${th.textSecondary}`}
-              placeholder={item.type === 'podcast' ? 'Show / Host' : item.type === 'video' ? 'Channel' : 'Artist'}
+              placeholder={
+                item.type === 'podcast' ? 'Show / Host' :
+                item.type === 'video' ? 'Channel' :
+                item.type === 'movie' ? 'Director' :
+                item.type === 'show' ? 'Creator' :
+                'Artist'
+              }
             />
           )}
           <div className="flex items-center gap-2 flex-wrap mt-2">
             {item.releaseDate && (
               <span className={`text-xs ${th.textMuted}`}>{formatYear(item.releaseDate)}</span>
+            )}
+            {item.airDates && (
+              <span className={`text-xs ${th.textMuted}`}>{item.airDates}</span>
+            )}
+            {item.runtime && (
+              <span className={`text-xs ${th.textMuted}`}>{item.runtime}</span>
+            )}
+            {item.seasonCount !== undefined && (
+              <span className={`text-xs ${th.textMuted}`}>{item.seasonCount} season{item.seasonCount !== 1 ? 's' : ''}</span>
+            )}
+            {item.language && (
+              <span className={`text-xs ${th.textMuted}`}>{item.language}</span>
             )}
             {item.genre?.map((g) => (
               <span key={g} className={`text-xs px-2 py-0.5 rounded-full ${th.genreChip}`}>
@@ -338,7 +381,7 @@ export function ItemDetailView() {
                     item.listenStatus === s ? th.chipActive : th.chipBase
                   }`}
                 >
-                  {LISTEN_STATUS_LABELS[s]}
+                  {getStatusLabel(s, item.type)}
                 </button>
               ))}
             </div>
@@ -517,7 +560,11 @@ function ExternalLinks({ item, th }: { item: import('../types').MusicItem; th: D
   const links: { label: string; url: string; icon: string }[] = []
   if (item.wikipediaUrl) links.push({ label: 'Wikipedia', url: item.wikipediaUrl, icon: 'W' })
   if (item.pitchforkUrl) links.push({ label: 'Pitchfork', url: item.pitchforkUrl, icon: 'P' })
-  const lastfmUrl = item.lastfmUrl ?? (item.type !== 'playlist' && item.type !== 'podcast' && item.type !== 'video' ? buildLastfmUrl(item.type, item.title, item.artist) : null)
+  const lastfmUrl = item.lastfmUrl ?? (
+    item.type !== 'playlist' && item.type !== 'podcast' && item.type !== 'video' && item.type !== 'movie' && item.type !== 'show'
+      ? buildLastfmUrl(item.type, item.title, item.artist)
+      : null
+  )
   if (lastfmUrl) links.push({ label: 'Last.fm', url: lastfmUrl, icon: '♫' })
   if (links.length === 0) return null
 
@@ -546,8 +593,8 @@ function PlatformLinks({ item, settings }: { item: import('../types').MusicItem;
   const query = item.artist ? `${item.title} ${item.artist}` : item.title
   const links: { label: string; url: string; color: string }[] = []
 
-  if (item.type === 'video') {
-    if (item.sourceUrl) links.push({ label: 'Watch on YouTube', url: item.sourceUrl, color: '#FF0000' })
+  if (item.type === 'video' || item.type === 'movie' || item.type === 'show') {
+    if (item.type === 'video' && item.sourceUrl) links.push({ label: 'Watch on YouTube', url: item.sourceUrl, color: '#FF0000' })
   } else {
     if (item.sourceUrl && item.sourcePlatform === 'spotify' && settings.platforms.spotify) {
       links.push({ label: 'Open in Spotify', url: item.sourceUrl, color: '#1DB954' })
