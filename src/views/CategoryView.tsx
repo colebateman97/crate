@@ -7,7 +7,7 @@ import type { ItemType, ListenStatus, MusicItem } from '../types'
 import { ITEM_TYPE_LABELS } from '../types'
 
 type SortMode = 'newest' | 'oldest' | 'az'
-type ViewMode = 'bylists' | 'all'
+type ViewMode = 'bylists' | 'all' | 'list'
 
 export function CategoryView() {
   const { type } = useParams<{ type: string }>()
@@ -17,6 +17,7 @@ export function CategoryView() {
   const [sortMode, setSortMode] = useState<SortMode>('newest')
   const [filterStatus, setFilterStatus] = useState<ListenStatus | 'all'>('all')
   const [filterTagId, setFilterTagId] = useState<string | null>(null)
+  const [selectedListId, setSelectedListId] = useState<string | null>(null)
 
   const itemType = type as ItemType
   const typeLabel = ITEM_TYPE_LABELS[itemType] ?? itemType
@@ -64,12 +65,12 @@ export function CategoryView() {
       {/* View toggle */}
       <div className="flex items-center gap-2 px-4 pb-3">
         <div className="flex rounded-full border border-zinc-200 dark:border-zinc-700 overflow-hidden text-sm">
-          {(['bylists', 'all'] as ViewMode[]).map((m) => (
+          {(['bylists', 'all'] as const).map((m) => (
             <button
               key={m}
-              onClick={() => setViewMode(m)}
+              onClick={() => { setViewMode(m); setSelectedListId(null) }}
               className={`px-4 py-1.5 transition-colors ${
-                viewMode === m
+                (viewMode === m || (viewMode === 'list' && m === 'bylists'))
                   ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium'
                   : 'text-zinc-500 dark:text-zinc-400'
               }`}
@@ -81,7 +82,53 @@ export function CategoryView() {
       </div>
 
       <AnimatePresence mode="wait">
-        {viewMode === 'bylists' ? (
+        {viewMode === 'list' && selectedListId ? (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex flex-col pb-28 md:pb-8"
+          >
+            {/* List header */}
+            <div className="flex items-center gap-2 px-4 pb-4">
+              <button
+                onClick={() => { setViewMode('bylists'); setSelectedListId(null) }}
+                className="text-sm text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+              >
+                ‹ Back
+              </button>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                {lists.find((l) => l.id === selectedListId)?.name}
+              </span>
+            </div>
+
+            {/* Sort */}
+            <div className="flex gap-2 px-4 pb-4">
+              <span className="text-xs text-zinc-400 self-center">Sort:</span>
+              {(['newest', 'oldest', 'az'] as SortMode[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSortMode(s)}
+                  className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
+                    sortMode === s
+                      ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'
+                      : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                  }`}
+                >
+                  {s === 'newest' ? 'Newest' : s === 'oldest' ? 'Oldest' : 'A–Z'}
+                </button>
+              ))}
+            </div>
+
+            {/* Grid */}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 px-4">
+              {applySort(typeItems.filter((i) => i.listIds.includes(selectedListId))).map((i) => (
+                <ItemCard key={i.id} item={i} tags={tags} size="sm" />
+              ))}
+            </div>
+          </motion.div>
+        ) : viewMode === 'bylists' ? (
           <motion.div
             key="bylists"
             initial={{ opacity: 0, x: -10 }}
@@ -98,7 +145,7 @@ export function CategoryView() {
                     <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{list.name}</h2>
                     {listItems.length > 5 && (
                       <button
-                        onClick={() => navigate(`/list/${list.id}?type=${itemType}`)}
+                        onClick={() => { setSelectedListId(list.id); setViewMode('list') }}
                         className="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                       >
                         See all ({listItems.length})
