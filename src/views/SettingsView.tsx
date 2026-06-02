@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useCrateStore } from '../store'
 import { downloadJson, generateId, getRandomTagColor } from '../utils'
 import { TagChip } from '../components/TagChip'
-import { getOrCreateSyncKey, storeSyncKey, pullFromCloud } from '../lib/sync'
+import { getOrCreateSyncKey, storeSyncKey, pullFromCloud, pushToCloud } from '../lib/sync'
 
 export function SettingsView() {
   const { settings, updateSettings, tags, addTag, updateTag, deleteTag, lists, addList, deleteList, exportData, importData, clearAllData } = useCrateStore()
@@ -15,6 +15,7 @@ export function SettingsView() {
   const [confirmClear, setConfirmClear] = useState(false)
   const [syncKey] = useState(() => getOrCreateSyncKey())
   const [syncKeyCopied, setSyncKeyCopied] = useState(false)
+  const [syncNowStatus, setSyncNowStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [restoreKey, setRestoreKey] = useState('')
   const [restoreStatus, setRestoreStatus] = useState<'idle' | 'loading' | 'success' | 'notfound' | 'error'>('idle')
 
@@ -62,6 +63,19 @@ export function SettingsView() {
     navigator.clipboard.writeText(syncKey)
     setSyncKeyCopied(true)
     setTimeout(() => setSyncKeyCopied(false), 2000)
+  }
+
+  async function handleSyncNow() {
+    setSyncNowStatus('loading')
+    try {
+      const { items, lists, tags, settings: s } = useCrateStore.getState()
+      const ok = await pushToCloud(syncKey, { items, lists, tags, settings: s })
+      setSyncNowStatus(ok ? 'success' : 'error')
+      setTimeout(() => setSyncNowStatus('idle'), 3000)
+    } catch {
+      setSyncNowStatus('error')
+      setTimeout(() => setSyncNowStatus('idle'), 3000)
+    }
   }
 
   async function handleRestore() {
@@ -280,6 +294,22 @@ export function SettingsView() {
                   {syncKeyCopied ? '✓' : 'Copy'}
                 </button>
               </div>
+            </div>
+            <div>
+              <button
+                onClick={handleSyncNow}
+                disabled={syncNowStatus === 'loading'}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 transition-colors"
+              >
+                <span>Sync now</span>
+                <span className={
+                  syncNowStatus === 'success' ? 'text-emerald-500' :
+                  syncNowStatus === 'error' ? 'text-red-400' : 'text-zinc-400'
+                }>
+                  {syncNowStatus === 'loading' ? '…' : syncNowStatus === 'success' ? '✓ Synced' : syncNowStatus === 'error' ? 'Failed' : '↑'}
+                </span>
+              </button>
+              <p className="text-xs text-zinc-400 mt-1.5">Manually push all your current data to the cloud.</p>
             </div>
             <div>
               <label className={labelCls}>Restore from a different sync key</label>

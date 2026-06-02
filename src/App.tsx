@@ -9,7 +9,7 @@ import { BottomNav, SideNav } from './components/Nav'
 import { AddFAB } from './components/AddButton'
 import { AddModal } from './components/AddModal'
 import { useCrateStore } from './store'
-import { getOrCreateSyncKey, pullFromCloud, pushToCloud, schedulePush } from './lib/sync'
+import { getOrCreateSyncKey, pushToCloud, schedulePush } from './lib/sync'
 
 import { HomeView } from './views/HomeView'
 import { CategoryView } from './views/CategoryView'
@@ -40,7 +40,7 @@ export default function App() {
     }
   }, [])
 
-  // Cloud sync
+  // Cloud sync — push on mount and on every change; never auto-pull (use Settings → Restore to recover data)
   useEffect(() => {
     try {
       const syncKey = getOrCreateSyncKey()
@@ -49,12 +49,6 @@ export default function App() {
       if (state.items.length > 0) {
         const { items, lists, tags, settings } = state
         pushToCloud(syncKey, { items, lists, tags, settings })
-      } else {
-        pullFromCloud(syncKey).then((cloudData) => {
-          if (cloudData && (cloudData as { items?: unknown[] }).items?.length) {
-            useCrateStore.getState().importData(JSON.stringify(cloudData))
-          }
-        }).catch(() => {})
       }
 
       const unsubscribe = useCrateStore.subscribe((state) => {
