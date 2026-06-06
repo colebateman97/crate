@@ -41,7 +41,7 @@ export function BottomNav() {
                   {isActive && (
                     <motion.span
                       layoutId="nav-indicator"
-                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-zinc-900 dark:bg-zinc-100 rounded-full"
+                      className="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-1 h-1 bg-zinc-900 dark:bg-zinc-100 rounded-full"
                     />
                   )}
                 </span>
