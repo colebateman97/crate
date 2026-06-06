@@ -113,6 +113,7 @@ export function ItemDetailView() {
 
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [bgColors, setBgColors] = useState<[string, string, string] | null>(null)
   const [textLight, setTextLight] = useState(false)
 
@@ -367,6 +368,23 @@ export function ItemDetailView() {
             ))}
           </div>
         </div>
+
+        {/* Synopsis (movie / show only) */}
+        {item.overview && (
+          <div className="px-5 mt-3">
+            <p
+              className={`text-sm leading-relaxed ${th.textSecondary} ${synopsisExpanded ? '' : 'line-clamp-1'}`}
+            >
+              {item.overview}
+            </p>
+            <button
+              onClick={() => setSynopsisExpanded((v) => !v)}
+              className={`text-xs mt-0.5 font-medium ${th.textMuted} hover:opacity-70 transition-opacity`}
+            >
+              {synopsisExpanded ? 'See less' : 'See more'}
+            </button>
+          </div>
+        )}
 
         {/* Status & rating */}
         <div className="px-5 mt-5 flex flex-col gap-4">

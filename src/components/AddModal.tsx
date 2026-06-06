@@ -48,6 +48,7 @@ interface FormState {
   seasonCount: string
   airDates: string
   tmdbId: number | null
+  overview: string
 }
 
 const DEFAULT_FORM: FormState = {
@@ -71,6 +72,7 @@ const DEFAULT_FORM: FormState = {
   seasonCount: '',
   airDates: '',
   tmdbId: null,
+  overview: '',
 }
 
 function statusLabel(status: ListenStatus, type: ItemType): string {
@@ -320,6 +322,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
         airDates: '',
         seasonCount: '',
         tmdbId: movieDetail.id,
+        overview: movieDetail.overview ?? '',
       }))
     } else if (result.media_type === 'tv' && tvDetail) {
       const creator = tvDetail.created_by?.map((c) => c.name).join(', ') ?? ''
@@ -340,6 +343,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
         airDates: airDatesStr,
         seasonCount: tvDetail.number_of_seasons?.toString() ?? '',
         tmdbId: tvDetail.id,
+        overview: tvDetail.overview ?? '',
       }))
     }
 
@@ -418,6 +422,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
       seasonCount: form.seasonCount ? (parseInt(form.seasonCount) || undefined) : undefined,
       airDates: form.airDates || undefined,
       tmdbId: form.tmdbId ?? undefined,
+      overview: form.overview || undefined,
       dateAdded: new Date().toISOString(),
     }
     addItem(newItem)

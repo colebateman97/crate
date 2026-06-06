@@ -41,6 +41,7 @@ export interface MusicItem {
   seasonCount?: number
   airDates?: string
   tmdbId?: number
+  overview?: string
 
   dateAdded: string
   dateListened?: string
