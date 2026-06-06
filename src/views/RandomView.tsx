@@ -53,7 +53,7 @@ export function RandomView() {
       <div className="flex flex-col gap-3 mb-8">
         <FilterRow label="Type">
           <FilterBtn active={filterType === 'all'} onClick={() => setFilterType('all')}>All</FilterBtn>
-          {(['album', 'song', 'artist', 'playlist'] as ItemType[]).map((t) => (
+          {(['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'] as ItemType[]).map((t) => (
             <FilterBtn key={t} active={filterType === t} onClick={() => setFilterType(t)}>
               {ITEM_TYPE_LABELS[t]}
             </FilterBtn>
@@ -97,7 +97,7 @@ export function RandomView() {
                   <img src={picked.coverArtUrl} alt={picked.title} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-6xl">
-                    {picked.type === 'album' ? '💿' : picked.type === 'song' ? '🎵' : picked.type === 'artist' ? '🎤' : '📋'}
+                    {picked.type === 'album' ? '💿' : picked.type === 'song' ? '🎵' : picked.type === 'artist' ? '🎤' : picked.type === 'playlist' ? '📋' : picked.type === 'podcast' ? '🎙️' : picked.type === 'video' ? '▶️' : picked.type === 'movie' ? '🎥' : '📺'}
                   </div>
                 )}
               </div>
