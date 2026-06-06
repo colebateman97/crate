@@ -1,23 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  TouchSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useCrateStore } from '../store'
 import type { ItemType, MusicItem } from '../types'
 
@@ -46,19 +28,12 @@ export function HomeView() {
     ? DEFAULT_ORDER
     : [...savedOrder, ...DEFAULT_ORDER.filter((t) => !savedOrder.includes(t))]
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (over && active.id !== over.id) {
-      const oldIndex = order.indexOf(active.id as ItemType)
-      const newIndex = order.indexOf(over.id as ItemType)
-      updateSettings({ categoryOrder: arrayMove(order, oldIndex, newIndex) })
-    }
+  function move(index: number, direction: -1 | 1) {
+    const next = [...order]
+    const swapIndex = index + direction
+    if (swapIndex < 0 || swapIndex >= next.length) return
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    updateSettings({ categoryOrder: next })
   }
 
   return (
@@ -76,21 +51,20 @@ export function HomeView() {
         </button>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={order} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-2 gap-3 px-4 pb-28 md:pb-8">
-            {order.map((type) => (
-              <SortableCategoryCard
-                key={type}
-                type={type}
-                allItems={items}
-                isReordering={isReordering}
-                onClick={() => navigate(`/category/${type}`)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <div className="grid grid-cols-2 gap-3 px-4 pb-28 md:pb-8">
+        {order.map((type, index) => (
+          <CategoryCard
+            key={type}
+            type={type}
+            allItems={items}
+            isReordering={isReordering}
+            index={index}
+            total={order.length}
+            onMove={move}
+            onClick={() => navigate(`/category/${type}`)}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -99,59 +73,64 @@ interface CardProps {
   type: ItemType
   allItems: MusicItem[]
   isReordering: boolean
+  index: number
+  total: number
+  onMove: (index: number, direction: -1 | 1) => void
   onClick: () => void
 }
 
-function SortableCategoryCard({ type, allItems, isReordering, onClick }: CardProps) {
+function CategoryCard({ type, allItems, isReordering, index, total, onMove, onClick }: CardProps) {
   const { label, emoji, color } = CATEGORY_META[type]
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: type,
-    disabled: !isReordering,
-  })
-
   const typeItems = allItems.filter((i) => i.type === type)
   const unlistened = typeItems.filter((i) => i.listenStatus === 'unlistened').length
   const recent = typeItems.slice(0, 4)
 
   return (
     <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition ?? undefined,
-        backgroundColor: 'rgba(255,255,255,0.06)',
-        zIndex: isDragging ? 10 : undefined,
-      }}
+      style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
       className={[
-        'relative overflow-hidden backdrop-blur-sm rounded-2xl p-4 text-left select-none',
+        'relative overflow-hidden backdrop-blur-sm rounded-2xl p-4 text-left select-none transition-shadow',
         isReordering
-          ? 'border-2 border-violet-400/40 dark:border-violet-500/30 cursor-grab active:cursor-grabbing'
-          : 'border border-white/10 dark:border-white/5 cursor-pointer',
-        isDragging ? 'shadow-2xl opacity-80' : '',
+          ? 'border-2 border-violet-400/40 dark:border-violet-500/30'
+          : 'border border-white/10 dark:border-white/5 cursor-pointer active:scale-[0.97]',
       ].join(' ')}
       onClick={isReordering ? undefined : onClick}
-      {...(isReordering ? { ...attributes, ...listeners } : {})}
     >
       <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${color} opacity-70 pointer-events-none`} />
       <div className="relative">
-        <div className="flex items-start justify-between">
-          <span className="text-2xl">{emoji}</span>
-          {isReordering && (
-            <span className="text-zinc-400 dark:text-zinc-500 text-xl leading-none mt-0.5">☰</span>
-          )}
-        </div>
+        <span className="text-2xl">{emoji}</span>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mt-2">{label}</h2>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
           {typeItems.length} item{typeItems.length !== 1 ? 's' : ''}
           {unlistened > 0 && ` · ${unlistened} new`}
         </p>
-        {recent.length > 0 && (
+
+        {isReordering ? (
+          <div className="flex gap-2 mt-3">
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onMove(index, -1) }}
+              disabled={index === 0}
+              className="flex-1 py-2 rounded-xl bg-black/8 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 text-base font-medium disabled:opacity-25 active:bg-black/15 dark:active:bg-white/20 transition-colors"
+            >
+              ←
+            </button>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onMove(index, 1) }}
+              disabled={index === total - 1}
+              className="flex-1 py-2 rounded-xl bg-black/8 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 text-base font-medium disabled:opacity-25 active:bg-black/15 dark:active:bg-white/20 transition-colors"
+            >
+              →
+            </button>
+          </div>
+        ) : recent.length > 0 ? (
           <div className="flex gap-1.5 mt-3 -mx-1">
             {recent.map((ri) => (
               <CoverThumb key={ri.id} item={ri} />
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
