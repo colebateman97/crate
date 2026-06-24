@@ -95,7 +95,7 @@ function statusLabel(status: ListenStatus, type: ItemType): string {
 }
 
 export function AddModal({ open, onClose, initialUrl }: Props) {
-  const { addItem, lists, addTag, settings } = useCrateStore()
+  const { addItem, items, lists, addTag, settings } = useCrateStore()
   const [step, setStep] = useState<Step>('input')
   const [urlInput, setUrlInput] = useState(initialUrl ?? '')
   const [query, setQuery] = useState('')
@@ -103,6 +103,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
   const [suggestions, setSuggestions] = useState<(MBRelease | MBRecording | MBArtist)[]>([])
   const [loading, setLoading] = useState(false)
   const [newTagName, setNewTagName] = useState('')
+  const [duplicateWarning, setDuplicateWarning] = useState(false)
 
   // TMDB-specific state
   const [tmdbQuery, setTmdbQuery] = useState('')
@@ -133,6 +134,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
       setTmdbQuery('')
       setTmdbResults([])
       setTmdbPreview(null)
+      setDuplicateWarning(false)
     }
   }, [open])
 
@@ -397,8 +399,21 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
     }
   }
 
-  async function handleSave() {
+  async function handleSave(force = false) {
     if (!form.title.trim()) return
+
+    if (!force) {
+      const isDuplicate = items.some((item) => {
+        if (form.tmdbId != null && item.tmdbId === form.tmdbId) return true
+        if (form.mbid && item.mbid === form.mbid) return true
+        return item.title.toLowerCase() === form.title.trim().toLowerCase() && item.type === form.type
+      })
+      if (isDuplicate) {
+        setDuplicateWarning(true)
+        return
+      }
+    }
+
     const genres = form.genre ? form.genre.split(',').map((g) => g.trim()).filter(Boolean) : []
     const newItem = {
       id: generateId(),
@@ -465,7 +480,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
             transition={{ type: 'spring', stiffness: 350, damping: 35 }}
           >
             <div
-              className="w-full md:max-w-lg bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              className="relative w-full md:max-w-lg bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
               style={{ maxHeight: '90dvh' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -496,6 +511,32 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                   ×
                 </button>
               </div>
+
+              {/* Duplicate warning overlay */}
+              {duplicateWarning && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-t-3xl md:rounded-2xl">
+                  <div className="mx-5 w-full max-w-sm bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-xl">
+                    <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Already in your collection</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+                      <span className="font-medium text-zinc-700 dark:text-zinc-300">{form.title.trim()}</span> is already in your Crate. Do you still want to add a duplicate?
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setDuplicateWarning(false)}
+                        className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => { setDuplicateWarning(false); handleSave(true) }}
+                        className="flex-1 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-sm font-semibold text-white dark:text-zinc-900 hover:opacity-90 transition-opacity"
+                      >
+                        Add anyway
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex-1 overflow-y-auto">
                 <AnimatePresence mode="wait">
@@ -971,7 +1012,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                       {/* Save */}
                       <div className="pt-2 pb-safe">
                         <button
-                          onClick={handleSave}
+                          onClick={() => handleSave()}
                           disabled={!form.title.trim()}
                           className="w-full py-3.5 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold text-sm disabled:opacity-40 transition-opacity hover:opacity-90 active:scale-[0.98]"
                         >
