@@ -41,7 +41,7 @@ export function HomeView() {
       <div className="px-5 pt-14 pb-6 md:pt-8 flex items-end justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Crate</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Your music backlog</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Your media backlog</p>
         </div>
         <button
           onClick={() => setIsReordering((v) => !v)}

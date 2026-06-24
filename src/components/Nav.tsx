@@ -59,7 +59,7 @@ export function SideNav({ onAdd }: { onAdd: () => void }) {
     <nav className="hidden md:flex flex-col gap-1 py-6 px-3 w-56 flex-shrink-0 h-full">
       <div className="px-3 mb-6">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">Crate</h1>
-        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Your music backlog</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Your media backlog</p>
       </div>
 
       {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
