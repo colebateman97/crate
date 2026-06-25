@@ -1,4 +1,4 @@
-export type ItemType = 'album' | 'song' | 'artist' | 'playlist' | 'podcast' | 'video' | 'movie' | 'show'
+export type ItemType = 'album' | 'song' | 'artist' | 'playlist' | 'podcast' | 'video' | 'movie' | 'show' | 'book'
 
 export type ListenStatus = 'unlistened' | 'in_progress' | 'listened' | 'want_to_revisit'
 
@@ -42,6 +42,9 @@ export interface MusicItem {
   airDates?: string
   tmdbId?: number
   overview?: string
+
+  // Book specific
+  openLibraryKey?: string
 
   dateAdded: string
   dateListened?: string
@@ -90,25 +93,25 @@ export const DEFAULT_LISTS: MusicList[] = [
     id: BUILT_IN_LIST_IDS.RECOMMENDATIONS,
     name: 'Recommendations',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show', 'book'],
   },
   {
     id: BUILT_IN_LIST_IDS.NEW_RELEASES,
     name: 'New Releases',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'playlist', 'podcast', 'video', 'movie', 'show'],
+    applicableTypes: ['album', 'song', 'playlist', 'podcast', 'video', 'movie', 'show', 'book'],
   },
   {
     id: BUILT_IN_LIST_IDS.REVISITS,
     name: 'Revisits',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show', 'book'],
   },
   {
     id: BUILT_IN_LIST_IDS.DISCOVERIES,
     name: 'Discoveries',
     isBuiltIn: true,
-    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'],
+    applicableTypes: ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show', 'book'],
   },
 ]
 
@@ -128,4 +131,5 @@ export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   video: 'Video',
   movie: 'Movie',
   show: 'Show',
+  book: 'Book',
 }

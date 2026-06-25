@@ -12,6 +12,15 @@ import type { ListenStatus, ItemType } from '../types'
 import { LISTEN_STATUS_LABELS } from '../types'
 
 function getStatusLabel(status: ListenStatus, type: ItemType): string {
+  if (type === 'book') {
+    const map: Record<ListenStatus, string> = {
+      unlistened: 'Unread',
+      in_progress: 'Reading',
+      listened: 'Read',
+      want_to_revisit: 'Want to Reread',
+    }
+    return map[status]
+  }
   if (type === 'movie' || type === 'show' || type === 'video') {
     const map: Record<ListenStatus, string> = {
       unlistened: 'Unwatched',
@@ -341,6 +350,7 @@ export function ItemDetailView() {
                 item.type === 'video' ? 'Channel' :
                 item.type === 'movie' ? 'Director' :
                 item.type === 'show' ? 'Creator' :
+                item.type === 'book' ? 'Author' :
                 'Artist'
               }
             />
@@ -579,7 +589,7 @@ function ExternalLinks({ item, th }: { item: import('../types').MusicItem; th: D
   if (item.wikipediaUrl) links.push({ label: 'Wikipedia', url: item.wikipediaUrl, icon: 'W' })
   if (item.pitchforkUrl) links.push({ label: 'Pitchfork', url: item.pitchforkUrl, icon: 'P' })
   const lastfmUrl = item.lastfmUrl ?? (
-    item.type !== 'playlist' && item.type !== 'podcast' && item.type !== 'video' && item.type !== 'movie' && item.type !== 'show'
+    item.type !== 'playlist' && item.type !== 'podcast' && item.type !== 'video' && item.type !== 'movie' && item.type !== 'show' && item.type !== 'book'
       ? buildLastfmUrl(item.type, item.title, item.artist)
       : null
   )
@@ -611,7 +621,7 @@ function PlatformLinks({ item, settings }: { item: import('../types').MusicItem;
   const query = item.artist ? `${item.title} ${item.artist}` : item.title
   const links: { label: string; url: string; color: string }[] = []
 
-  if (item.type === 'video' || item.type === 'movie' || item.type === 'show') {
+  if (item.type === 'video' || item.type === 'movie' || item.type === 'show' || item.type === 'book') {
     if (item.type === 'video' && item.sourceUrl) links.push({ label: 'Watch on YouTube', url: item.sourceUrl, color: '#FF0000' })
   } else {
     if (item.sourceUrl && item.sourcePlatform === 'spotify' && settings.platforms.spotify) {

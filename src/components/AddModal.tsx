@@ -14,6 +14,8 @@ import {
   tmdbPosterUrl, formatRuntime, formatAirDates,
 } from '../api/tmdb'
 import type { TmdbSearchResult, TmdbMovieDetail, TmdbTvDetail } from '../api/tmdb'
+import { searchBooks, bookCoverUrl, bookLanguageName } from '../api/books'
+import type { OpenLibraryDoc } from '../api/books'
 import type { MBRelease, MBRecording, MBArtist } from '../api/musicbrainz'
 import { generateId, getRandomTagColor } from '../utils'
 import type { ItemType, ListenStatus } from '../types'
@@ -49,6 +51,7 @@ interface FormState {
   airDates: string
   tmdbId: number | null
   overview: string
+  openLibraryKey: string
 }
 
 const DEFAULT_FORM: FormState = {
@@ -73,9 +76,19 @@ const DEFAULT_FORM: FormState = {
   airDates: '',
   tmdbId: null,
   overview: '',
+  openLibraryKey: '',
 }
 
 function statusLabel(status: ListenStatus, type: ItemType): string {
+  if (type === 'book') {
+    const map: Record<ListenStatus, string> = {
+      unlistened: 'Unread',
+      in_progress: 'Reading',
+      listened: 'Read',
+      want_to_revisit: 'Want to Reread',
+    }
+    return map[status]
+  }
   if (type === 'movie' || type === 'show' || type === 'video') {
     const map: Record<ListenStatus, string> = {
       unlistened: 'Unwatched',
@@ -114,8 +127,12 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
     tvDetail: TmdbTvDetail | null
   } | null>(null)
 
+  const [bookQuery, setBookQuery] = useState('')
+  const [bookResults, setBookResults] = useState<OpenLibraryDoc[]>([])
+
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tmdbSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bookSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (initialUrl) {
@@ -134,6 +151,8 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
       setTmdbQuery('')
       setTmdbResults([])
       setTmdbPreview(null)
+      setBookQuery('')
+      setBookResults([])
       setDuplicateWarning(false)
     }
   }, [open])
@@ -355,6 +374,43 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
     setTmdbQuery('')
   }
 
+  function handleBookQueryChange(q: string) {
+    setBookQuery(q)
+    if (bookSearchTimeout.current) clearTimeout(bookSearchTimeout.current)
+    if (!q.trim()) { setBookResults([]); return }
+    bookSearchTimeout.current = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const results = await searchBooks(q)
+        setBookResults(results)
+      } finally {
+        setLoading(false)
+      }
+    }, 500)
+  }
+
+  function handleBookSelect(doc: OpenLibraryDoc) {
+    const authors = doc.author_name?.join(', ') ?? ''
+    const year = doc.first_publish_year?.toString() ?? ''
+    const coverUrl = bookCoverUrl(doc.cover_i) ?? ''
+    const language = doc.language?.[0] ? bookLanguageName(doc.language[0]) : ''
+    const genres = doc.subject?.slice(0, 3).join(', ') ?? ''
+    setForm((f) => ({
+      ...f,
+      type: 'book',
+      title: doc.title,
+      artist: authors,
+      releaseDate: year,
+      language,
+      coverArtUrl: coverUrl,
+      genre: genres,
+      openLibraryKey: doc.key,
+    }))
+    setStep('details')
+    setBookResults([])
+    setBookQuery('')
+  }
+
   async function handleSuggestionPick(suggestion: MBRelease | MBRecording | MBArtist) {
     setLoading(true)
     try {
@@ -406,6 +462,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
       const isDuplicate = items.some((item) => {
         if (form.tmdbId != null && item.tmdbId === form.tmdbId) return true
         if (form.mbid && item.mbid === form.mbid) return true
+        if (form.openLibraryKey && item.openLibraryKey === form.openLibraryKey) return true
         return item.title.toLowerCase() === form.title.trim().toLowerCase() && item.type === form.type
       })
       if (isDuplicate) {
@@ -438,6 +495,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
       airDates: form.airDates || undefined,
       tmdbId: form.tmdbId ?? undefined,
       overview: form.overview || undefined,
+      openLibraryKey: form.openLibraryKey || undefined,
       dateAdded: new Date().toISOString(),
     }
     addItem(newItem)
@@ -457,6 +515,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
 
   const relevantLists = lists.filter((l) => l.applicableTypes.includes(form.type))
   const isTmdbType = form.type === 'movie' || form.type === 'show'
+  const isBookType = form.type === 'book'
 
   return (
     <AnimatePresence>
@@ -551,8 +610,8 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                       {/* Type selector */}
                       <div>
                         <label className="text-xs text-zinc-400 uppercase tracking-wider mb-2 block">Type</label>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {(['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show'] as ItemType[]).map((t) => (
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show', 'book'] as ItemType[]).map((t) => (
                             <button
                               key={t}
                               onClick={() => {
@@ -560,6 +619,8 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                                 setSuggestions([])
                                 setTmdbResults([])
                                 setTmdbQuery('')
+                                setBookResults([])
+                                setBookQuery('')
                               }}
                               className={`py-2 rounded-xl text-xs font-medium border transition-colors ${
                                 form.type === t
@@ -604,6 +665,31 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                               )}
                             </>
                           )}
+                        </div>
+                      ) : isBookType ? (
+                        /* Open Library search for books */
+                        <div>
+                          <label className="text-xs text-zinc-400 uppercase tracking-wider mb-2 block">Search</label>
+                          <input
+                            value={bookQuery}
+                            onChange={(e) => handleBookQueryChange(e.target.value)}
+                            placeholder="Search books…"
+                            className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
+                          />
+                          {loading && <p className="text-xs text-zinc-400 mt-1.5 px-1">Searching…</p>}
+                          {bookResults.length > 0 && (
+                            <div className="mt-2 flex flex-col gap-1">
+                              {bookResults.map((doc) => (
+                                <BookResultRow key={doc.key} doc={doc} onClick={() => handleBookSelect(doc)} />
+                              ))}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => setStep('details')}
+                            className="text-sm text-zinc-400 underline text-center w-full mt-4"
+                          >
+                            Enter manually without searching
+                          </button>
                         </div>
                       ) : (
                         <>
@@ -787,11 +873,11 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                             src={form.coverArtUrl}
                             alt=""
                             className={`rounded-2xl object-cover shadow-lg ${
-                              form.type === 'movie' || form.type === 'show'
+                              form.type === 'movie' || form.type === 'show' || form.type === 'book'
                                 ? 'h-44'
                                 : 'w-32 h-32'
                             }`}
-                            style={form.type === 'movie' || form.type === 'show' ? { aspectRatio: '2/3' } : {}}
+                            style={form.type === 'movie' || form.type === 'show' || form.type === 'book' ? { aspectRatio: '2/3' } : {}}
                           />
                         </div>
                       )}
@@ -811,6 +897,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                           form.type === 'video' ? 'Channel' :
                           form.type === 'movie' ? 'Director' :
                           form.type === 'show' ? 'Creator' :
+                          form.type === 'book' ? 'Author / Illustrator' :
                           'Artist'
                         }>
                           <input
@@ -821,6 +908,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                               form.type === 'video' ? 'Channel name' :
                               form.type === 'movie' ? 'Director name' :
                               form.type === 'show' ? 'Creator / showrunner' :
+                              form.type === 'book' ? 'Author(s), illustrator(s)' :
                               'Artist name'
                             }
                             className={inputCls}
@@ -828,8 +916,8 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                         </FormField>
                       )}
 
-                      {(form.type === 'album' || form.type === 'song' || form.type === 'podcast' || form.type === 'movie') && (
-                        <FormField label="Release date">
+                      {(form.type === 'album' || form.type === 'song' || form.type === 'podcast' || form.type === 'movie' || form.type === 'book') && (
+                        <FormField label={form.type === 'book' ? 'Year published' : 'Release date'}>
                           <input
                             value={form.releaseDate}
                             onChange={(e) => f('releaseDate', e.target.value)}
@@ -874,7 +962,7 @@ export function AddModal({ open, onClose, initialUrl }: Props) {
                         </FormField>
                       )}
 
-                      {(form.type === 'movie' || form.type === 'show') && (
+                      {(form.type === 'movie' || form.type === 'show' || form.type === 'book') && (
                         <FormField label="Language">
                           <input
                             value={form.language}
@@ -1072,6 +1160,34 @@ function TmdbResultRow({ result, onClick }: { result: TmdbSearchResult; onClick:
           }`}>
             {isMovie ? 'Movie' : 'Show'}
           </span>
+        </div>
+      </div>
+      <span className="text-zinc-300 dark:text-zinc-600 text-lg flex-shrink-0">›</span>
+    </button>
+  )
+}
+
+function BookResultRow({ doc, onClick }: { doc: OpenLibraryDoc; onClick: () => void }) {
+  const cover = bookCoverUrl(doc.cover_i)
+  const authors = doc.author_name?.slice(0, 2).join(', ')
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-left w-full"
+    >
+      <div className="w-8 flex-shrink-0 rounded-md overflow-hidden bg-zinc-200 dark:bg-zinc-700" style={{ aspectRatio: '2/3' }}>
+        {cover ? (
+          <img src={cover} alt={doc.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-sm opacity-40">📚</div>
+        )}
+      </div>
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{doc.title}</span>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {authors && <span className="text-xs text-zinc-400 truncate">{authors}</span>}
+          {doc.first_publish_year && <span className="text-xs text-zinc-400 flex-shrink-0">{doc.first_publish_year}</span>}
         </div>
       </div>
       <span className="text-zinc-300 dark:text-zinc-600 text-lg flex-shrink-0">›</span>

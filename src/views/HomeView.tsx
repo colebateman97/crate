@@ -12,9 +12,10 @@ const CATEGORY_META: Record<ItemType, { label: string; emoji: string; color: str
   video:   { label: 'Videos',    emoji: '🎬',  color: 'from-red-500/20 to-rose-500/10' },
   movie:   { label: 'Movies',    emoji: '🎥',  color: 'from-indigo-500/20 to-blue-500/10' },
   show:    { label: 'Shows',     emoji: '📺',  color: 'from-cyan-500/20 to-sky-500/10' },
+  book:    { label: 'Books',     emoji: '📚',  color: 'from-emerald-500/20 to-green-500/10' },
 }
 
-const DEFAULT_ORDER: ItemType[] = ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show']
+const DEFAULT_ORDER: ItemType[] = ['album', 'song', 'artist', 'playlist', 'podcast', 'video', 'movie', 'show', 'book']
 
 export function HomeView() {
   const navigate = useNavigate()
@@ -143,7 +144,7 @@ function CoverThumb({ item }: { item: MusicItem }) {
         <img src={item.coverArtUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-lg opacity-50">
-          {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : item.type === 'artist' ? '🎤' : item.type === 'podcast' ? '🎙️' : item.type === 'video' ? '🎬' : item.type === 'movie' ? '🎥' : item.type === 'show' ? '📺' : '📋'}
+          {item.type === 'album' ? '💿' : item.type === 'song' ? '🎵' : item.type === 'artist' ? '🎤' : item.type === 'podcast' ? '🎙️' : item.type === 'video' ? '🎬' : item.type === 'movie' ? '🎥' : item.type === 'show' ? '📺' : item.type === 'book' ? '📚' : '📋'}
         </div>
       )}
     </div>
