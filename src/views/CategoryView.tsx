@@ -3,25 +3,67 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCrateStore } from '../store'
 import { ItemCard } from '../components/ItemCard'
-import type { ItemType, ListenStatus, MusicItem } from '../types'
+import type { ItemType, ListenStatus, MusicItem, MusicList } from '../types'
 import { ITEM_TYPE_LABELS } from '../types'
 
 type SortMode = 'newest' | 'oldest' | 'az'
 type ViewMode = 'bylists' | 'all' | 'list'
 
+function statusPriority(status: ListenStatus): number {
+  switch (status) {
+    case 'unlistened': return 0
+    case 'in_progress': return 1
+    case 'want_to_revisit': return 2
+    case 'listened': return 3
+  }
+}
+
+function sortByStatus(arr: MusicItem[]): MusicItem[] {
+  return [...arr].sort((a, b) => {
+    const pd = statusPriority(a.listenStatus) - statusPriority(b.listenStatus)
+    if (pd !== 0) return pd
+    return b.dateAdded.localeCompare(a.dateAdded)
+  })
+}
+
 export function CategoryView() {
   const { type } = useParams<{ type: string }>()
   const navigate = useNavigate()
-  const { items, lists, tags } = useCrateStore()
+  const { items, lists, tags, settings, updateSettings } = useCrateStore()
   const [viewMode, setViewMode] = useState<ViewMode>('bylists')
   const [sortMode, setSortMode] = useState<SortMode>('newest')
   const [filterStatus, setFilterStatus] = useState<ListenStatus | 'all'>('all')
   const [filterTagId, setFilterTagId] = useState<string | null>(null)
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
+  const [editingLists, setEditingLists] = useState(false)
 
   const itemType = type as ItemType
   const typeLabel = ITEM_TYPE_LABELS[itemType] ?? itemType
   const typeItems = items.filter((i) => i.type === itemType)
+
+  // Order lists by settings.listOrder
+  const listOrder = settings.listOrder ?? []
+  const relevantLists: MusicList[] = lists
+    .filter((l) => l.applicableTypes.includes(itemType))
+    .sort((a, b) => {
+      const ai = listOrder.indexOf(a.id)
+      const bi = listOrder.indexOf(b.id)
+      if (ai === -1 && bi === -1) return 0
+      if (ai === -1) return 1
+      if (bi === -1) return -1
+      return ai - bi
+    })
+
+  function moveList(listId: string, direction: -1 | 1) {
+    const ids = relevantLists.map((l) => l.id)
+    const idx = ids.indexOf(listId)
+    const swapIdx = idx + direction
+    if (swapIdx < 0 || swapIdx >= ids.length) return
+    ;[ids[idx], ids[swapIdx]] = [ids[swapIdx], ids[idx]]
+    // Merge with any lists not in relevantLists (other types) to preserve their position
+    const others = listOrder.filter((id) => !ids.includes(id))
+    updateSettings({ listOrder: [...ids, ...others] })
+  }
 
   function applyFilters(arr: MusicItem[]) {
     let result = arr
@@ -35,8 +77,6 @@ export function CategoryView() {
     if (sortMode === 'oldest') return [...arr].sort((a, b) => a.dateAdded.localeCompare(b.dateAdded))
     return [...arr].sort((a, b) => a.title.localeCompare(b.title))
   }
-
-  const relevantLists = lists.filter((l) => l.applicableTypes.includes(itemType))
 
   const statusOptions: { value: ListenStatus | 'all'; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -56,10 +96,18 @@ export function CategoryView() {
         >
           ‹
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{typeLabel}s</h1>
           <p className="text-xs text-zinc-400 mt-0.5">{typeItems.length} items</p>
         </div>
+        {viewMode === 'bylists' && (
+          <button
+            onClick={() => setEditingLists((v) => !v)}
+            className="text-sm font-medium text-violet-500 dark:text-violet-400"
+          >
+            {editingLists ? 'Done' : 'Edit'}
+          </button>
+        )}
       </div>
 
       {/* View toggle */}
@@ -68,7 +116,7 @@ export function CategoryView() {
           {(['bylists', 'all'] as const).map((m) => (
             <button
               key={m}
-              onClick={() => { setViewMode(m); setSelectedListId(null) }}
+              onClick={() => { setViewMode(m); setSelectedListId(null); setEditingLists(false) }}
               className={`px-4 py-1.5 transition-colors ${
                 (viewMode === m || (viewMode === 'list' && m === 'bylists'))
                   ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium'
@@ -121,7 +169,7 @@ export function CategoryView() {
               ))}
             </div>
 
-            {/* Grid */}
+            {/* Grid — user's chosen sort, status sort applied within same sort key */}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 px-4">
               {applySort(typeItems.filter((i) => i.listIds.includes(selectedListId))).map((i) => (
                 <ItemCard key={i.id} item={i} tags={tags} size="sm" />
@@ -136,33 +184,57 @@ export function CategoryView() {
             exit={{ opacity: 0, x: 10 }}
             className="flex flex-col gap-6 pb-28 md:pb-8"
           >
-            {relevantLists.map((list) => {
-              const listItems = typeItems.filter((i) => i.listIds.includes(list.id))
-              if (listItems.length === 0) return null
-              return (
-                <div key={list.id}>
-                  <div className="flex items-center justify-between px-4 mb-3">
-                    <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{list.name}</h2>
-                    {listItems.length > 5 && (
-                      <button
-                        onClick={() => { setSelectedListId(list.id); setViewMode('list') }}
-                        className="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                      >
-                        See all ({listItems.length})
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar px-4">
-                    {listItems.slice(0, 10).map((i) => (
-                      <ItemCard key={i.id} item={i} tags={tags} size="md" />
-                    ))}
-                  </div>
-                </div>
+            {(() => {
+              const visibleLists = relevantLists.filter((l) =>
+                typeItems.some((i) => i.listIds.includes(l.id))
               )
-            })}
+              return visibleLists.map((list, listIndex) => {
+                const listItems = sortByStatus(typeItems.filter((i) => i.listIds.includes(list.id)))
+                return (
+                  <div key={list.id}>
+                    <div className="flex items-center justify-between px-4 mb-3">
+                      <div className="flex items-center gap-2">
+                        {editingLists && (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => moveList(list.id, -1)}
+                              disabled={listIndex === 0}
+                              className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-25 transition-colors text-sm"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              onClick={() => moveList(list.id, 1)}
+                              disabled={listIndex === visibleLists.length - 1}
+                              className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-25 transition-colors text-sm"
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        )}
+                        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{list.name}</h2>
+                      </div>
+                      {!editingLists && listItems.length > 5 && (
+                        <button
+                          onClick={() => { setSelectedListId(list.id); setViewMode('list') }}
+                          className="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                        >
+                          See all ({listItems.length})
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto no-scrollbar px-4">
+                      {listItems.slice(0, 10).map((i) => (
+                        <ItemCard key={i.id} item={i} tags={tags} size="md" />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            })()}
             {/* Items not in any list */}
             {(() => {
-              const unlistedItems = typeItems.filter((i) => i.listIds.length === 0)
+              const unlistedItems = sortByStatus(typeItems.filter((i) => i.listIds.length === 0))
               if (unlistedItems.length === 0) return null
               return (
                 <div>
@@ -206,7 +278,7 @@ export function CategoryView() {
                 <button
                   key={tag.id}
                   onClick={() => setFilterTagId(filterTagId === tag.id ? null : tag.id)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors`}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                   style={{
                     backgroundColor: filterTagId === tag.id ? tag.color : 'transparent',
                     color: filterTagId === tag.id ? '#fff' : tag.color,

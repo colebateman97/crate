@@ -72,6 +72,7 @@ export interface AppSettings {
   lastfmApiKey: string
   tmdbApiKey?: string
   categoryOrder?: ItemType[]
+  listOrder?: string[]
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

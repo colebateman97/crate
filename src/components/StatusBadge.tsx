@@ -21,10 +21,28 @@ const STATUS_DOTS: Record<ListenStatus, string> = {
   want_to_revisit: 'bg-violet-400',
 }
 
-export function StatusBadge({ status, size = 'md', showLabel = true }: Props) {
-  const dot = <span className={`inline-block w-1.5 h-1.5 rounded-full ${STATUS_DOTS[status]}`} />
+// Icon badges shown on thumbnails — unlistened shows nothing
+const ICON_BADGE: Partial<Record<ListenStatus, { icon: string; bg: string }>> = {
+  in_progress: { icon: '▶', bg: 'bg-amber-500' },
+  listened: { icon: '✓', bg: 'bg-emerald-500' },
+  want_to_revisit: { icon: '↺', bg: 'bg-violet-500' },
+}
 
-  if (!showLabel) return dot
+export function StatusBadge({ status, size = 'md', showLabel = true }: Props) {
+  if (!showLabel) {
+    const badge = ICON_BADGE[status]
+    if (!badge) return null
+    return (
+      <span
+        className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full ${badge.bg} text-white shadow-md`}
+        style={{ fontSize: 9, fontWeight: 700, lineHeight: 1 }}
+      >
+        {badge.icon}
+      </span>
+    )
+  }
+
+  const dot = <span className={`inline-block w-1.5 h-1.5 rounded-full ${STATUS_DOTS[status]}`} />
 
   const cls =
     size === 'sm'
