@@ -41,8 +41,9 @@ export function CategoryView() {
   const typeLabel = ITEM_TYPE_LABELS[itemType] ?? itemType
   const typeItems = items.filter((i) => i.type === itemType)
 
-  // Order lists by settings.listOrder
-  const listOrder = settings.listOrder ?? []
+  // Per-collection list order — each itemType has its own ordering
+  const listOrderMap = settings.listOrder ?? {}
+  const listOrder: string[] = listOrderMap[itemType] ?? []
   const relevantLists: MusicList[] = lists
     .filter((l) => l.applicableTypes.includes(itemType))
     .sort((a, b) => {
@@ -60,9 +61,7 @@ export function CategoryView() {
     const swapIdx = idx + direction
     if (swapIdx < 0 || swapIdx >= ids.length) return
     ;[ids[idx], ids[swapIdx]] = [ids[swapIdx], ids[idx]]
-    // Merge with any lists not in relevantLists (other types) to preserve their position
-    const others = listOrder.filter((id) => !ids.includes(id))
-    updateSettings({ listOrder: [...ids, ...others] })
+    updateSettings({ listOrder: { ...listOrderMap, [itemType]: ids } })
   }
 
   function applyFilters(arr: MusicItem[]) {

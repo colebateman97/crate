@@ -123,7 +123,7 @@ export const useCrateStore = create<CrateStore>()(
     {
       name: 'crate-data',
       storage: createJSONStorage(() => localStorage),
-      version: 4,
+      version: 5,
       migrate: (state: unknown, version: number) => {
         try {
           const s = state as { items?: MusicItem[]; lists?: MusicList[]; tags?: Tag[]; settings?: AppSettings }
@@ -157,6 +157,12 @@ export const useCrateStore = create<CrateStore>()(
               const types = l.applicableTypes ?? []
               const toAdd = (['movie', 'show'] as const).filter((t) => !types.includes(t))
               return toAdd.length > 0 ? { ...l, applicableTypes: [...types, ...toAdd] } : l
+            })
+          }
+          if (version < 5) {
+            s.lists = (s.lists ?? []).map((l) => {
+              const types = l.applicableTypes ?? []
+              return types.includes('book') ? l : { ...l, applicableTypes: [...types, 'book'] }
             })
           }
           return s
